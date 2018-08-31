@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_media"
+        android:icon="@drawable/ic_media"
+        android:title="Media"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/menu_image"
+                android:icon="@drawable/ic_pic"
+                android:title="Image" />
+            <item
+                android:id="@+id/menu_video"
+                android:icon="@drawable/ic_vid"
+                android:title="Video" />
+        </menu>
+    </item>
+    <item
+        android:id="@+id/menu_camera"
+        android:icon="@drawable/ic_camera"
+        android:title="Camera"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/menu_settings"
+        android:title="Settings"
+        android:icon="@drawable/ic_setting"
+        app:showAsAction="never" />
+
+</menu>
