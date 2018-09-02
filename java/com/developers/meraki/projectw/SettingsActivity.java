@@ -57,9 +57,9 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
         spinnerRotation.setAdapter(adapter);
 
         String rotation = prefManager.getStringValue("rotation");
-        if (rotation == "clockwise") {
+        if (rotation.equalsIgnoreCase("clockwise")) {
             spinnerRotation.setSelection(0);
-        } else if (rotation == "anticlockwise") {
+        } else if (rotation.equalsIgnoreCase("anticlockwise")) {
             spinnerRotation.setSelection(1);
         }
     }

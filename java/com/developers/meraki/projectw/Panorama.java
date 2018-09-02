@@ -48,6 +48,7 @@ public class Panorama {
     private Context context;
     private static String LOG_TAG = "Panorama";
     private static PrefManager prefManager;
+    private Map<String, String> map = new HashMap<String, String>();
 
     private String[][] well_plate = {
             {"a", "y", "z", "d", "e", "f"},
@@ -120,6 +121,9 @@ public class Panorama {
         //save each row images after converting res(Mat) to bitmap
         String rowImageName = "panorama";
         saveImage(dirPathOut, rowImageName, res);
+
+        //delete map values
+        map.clear();
 
         return res;
     }
@@ -259,8 +263,6 @@ public class Panorama {
 
     public Bitmap getContourArea(Bitmap bmp, boolean is_menu_image, String imgDecodableString, String tmp_well_dir, TextView txtResultWellPlate, int minThreshold) {
 
-        Map<String, String> map = new HashMap<String, String>();
-
         Mat src = new Mat();
         Mat resizeSrc = new Mat();
         Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
@@ -273,8 +275,6 @@ public class Panorama {
         String rotation = prefManager.getStringValue("rotation");
 
         if (bmp.getWidth() > bmp.getHeight()) {
-            //rotate image by 90
-            //Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
             if (rotation.equalsIgnoreCase("anticlockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
             }else if(rotation.equalsIgnoreCase( "clockwise")) {
@@ -370,9 +370,8 @@ public class Panorama {
                 double minError = cmp.getSimilarity();
 
                 if (map.containsKey(imageName)) {
-                    double error = Double.parseDouble(map.get(imageName));
-                    //TODO: looks suspicious check it
-                    if (error > minError) {
+                    double score = Double.parseDouble(map.get(imageName));
+                    if (score < minError) {
                         map.put(imageName, "" + minError);
                         saveImage(tmp_well_dir, imageName, bmp);
                     }
