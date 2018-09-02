@@ -354,8 +354,8 @@ public class Panorama {
         String result = "No wells found!";
 
         if (rectCrop != null) {
-            Mat image_roi = new Mat(resizeSrc, rectCrop);
-            //Mat image_roi = new Mat(binary, rectCrop);
+            //Mat image_roi = new Mat(resizeSrc, rectCrop);
+            Mat image_roi = new Mat(binary, rectCrop);
             bmp = Bitmap.createBitmap(image_roi.cols(), image_roi.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(image_roi, bmp);
 
