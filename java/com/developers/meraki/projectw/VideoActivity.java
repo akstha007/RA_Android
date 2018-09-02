@@ -179,7 +179,7 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
 
         Bitmap bitmap = ((BitmapDrawable) image.getDrawable()).getBitmap();
 
-        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate);
+        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate,100);
         image.setImageBitmap(bittmap);
     }
 
@@ -326,7 +326,7 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
                 File imgFile = new File(filepath);
                 Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
                 imgDecodableString = imgFile.getAbsolutePath();
-                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate);
+                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate,100);
             }
         }
     }
