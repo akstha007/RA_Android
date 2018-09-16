@@ -24,6 +24,7 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
@@ -39,10 +40,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.Math.log10;
 import static org.opencv.core.Core.absdiff;
+import static org.opencv.core.Core.divide;
+import static org.opencv.core.Core.mean;
 import static org.opencv.imgproc.Imgproc.ADAPTIVE_THRESH_MEAN_C;
+import static org.opencv.imgproc.Imgproc.GaussianBlur;
 import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
 import static org.opencv.imgproc.Imgproc.adaptiveThreshold;
+import static org.opencv.imgproc.Imgproc.threshold;
 
 public class Panorama {
     private Context context;
@@ -254,14 +260,15 @@ public class Panorama {
     public Bitmap getContour(Bitmap bmp, boolean is_menu_image, String imgDecodableString, String tmp_well_dir, TextView txtResultWellPlate) {
         Bitmap bitmap = null;
         for (int i = 80; i < 150; i = i + 10) {
-            bitmap = getContourArea(bmp, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, i);
+            bitmap = getContourArea(bmp, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         }
 
         return bitmap;
     }
 
 
-    public Bitmap getContourArea(Bitmap bmp, boolean is_menu_image, String imgDecodableString, String tmp_well_dir, TextView txtResultWellPlate, int minThreshold) {
+    public Bitmap getContourArea(Bitmap bmp, boolean is_menu_image, String imgDecodableString,
+                                 String tmp_well_dir, TextView txtResultWellPlate, boolean isFirst) {
 
         Mat src = new Mat();
         Mat resizeSrc = new Mat();
@@ -277,7 +284,7 @@ public class Panorama {
         if (bmp.getWidth() > bmp.getHeight()) {
             if (rotation.equalsIgnoreCase("anticlockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
-            }else if(rotation.equalsIgnoreCase( "clockwise")) {
+            } else if (rotation.equalsIgnoreCase("clockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
             }
 
@@ -287,7 +294,7 @@ public class Panorama {
 
         Mat gray = new Mat();
         Mat binary = new Mat();
-        org.opencv.core.Size sz = new org.opencv.core.Size(bmp_w, bmp_h);
+        Size sz = new Size(bmp_w, bmp_h);
         Imgproc.resize(src, resizeSrc, sz);
         Imgproc.cvtColor(resizeSrc, gray, Imgproc.COLOR_RGBA2GRAY);
         //Imgproc.threshold(gray, binary, 128, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
@@ -330,7 +337,7 @@ public class Panorama {
                     if (r_w > 1.5 && r_w < 2.5 && r_h > 1.5 && r_h < 2.5) {
 
                         Mat imCrop = new Mat(resizeSrc, rect);
-                        cmp = compareImages(imCrop);
+                        cmp = compareImages(imCrop, isFirst);
 
                         /*Imgproc.rectangle(resizeSrc, rect.tl(), rect.br(), new Scalar(255, 0, 0, .8), 2);
                         putText(resizeSrc, "" + sim, new Point(rect.x, rect.y),
@@ -354,8 +361,8 @@ public class Panorama {
         String result = "No wells found!";
 
         if (rectCrop != null) {
-            //Mat image_roi = new Mat(resizeSrc, rectCrop);
-            Mat image_roi = new Mat(binary, rectCrop);
+            Mat image_roi = new Mat(resizeSrc, rectCrop);
+            //Mat image_roi = new Mat(binary, rectCrop);
             bmp = Bitmap.createBitmap(image_roi.cols(), image_roi.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(image_roi, bmp);
 
@@ -394,13 +401,14 @@ public class Panorama {
         return bmp;
     }
 
-    public CompareResult compareImages(Mat img1) {
+    public CompareResult compareImages(Mat img1, Boolean isFirst) {
         //resize the images
         Mat resizeImg1 = new Mat();
         org.opencv.core.Size sz = new org.opencv.core.Size(50, 50);
         Imgproc.resize(img1, resizeImg1, sz);
         Imgproc.cvtColor(resizeImg1, resizeImg1, Imgproc.COLOR_RGBA2GRAY);
-        adaptiveThreshold(resizeImg1, resizeImg1, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+        //adaptiveThreshold(resizeImg1, resizeImg1, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+        Imgproc.threshold(resizeImg1, resizeImg1, 90, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
 
         double minError = 0;
         String imageName = "";
@@ -408,6 +416,11 @@ public class Panorama {
         CompareResult cmp = new CompareResult();
 
         for (int i = 0; i < rawImages.length; i++) {
+
+            String imgname = "" + (char) (rawImages[i][1] + 'a' - 1);
+            if (!isFirst && map.containsKey(imgname)) {
+                continue;
+            }
 
             InputStream imageStream = context.getResources().openRawResource(rawImages[i][0]);
             Bitmap bitmap = BitmapFactory.decodeStream(imageStream);
@@ -418,17 +431,24 @@ public class Panorama {
             Mat resizeImg2 = new Mat();
             Imgproc.resize(img2, resizeImg2, sz);
             Imgproc.cvtColor(resizeImg2, resizeImg2, Imgproc.COLOR_RGBA2GRAY);
-            adaptiveThreshold(resizeImg2, resizeImg2, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+            //adaptiveThreshold(resizeImg2, resizeImg2, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+            Imgproc.threshold(resizeImg2, resizeImg2, 80, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
 
-            Mat s1 = new Mat();
+
+           /* Mat s1 = new Mat();
             double score = 0;
             absdiff(resizeImg1, resizeImg2, s1);
             s1.convertTo(s1, CvType.CV_32F);
 
             Scalar s = Core.sumElems(s1);
-            score = s.val[0] + s.val[1] + s.val[2];
-            score = 1 - score / (50 * 50 * 255);
 
+            //Scalar s = getMSSIM(resizeImg1,resizeImg2);
+
+            score = s.val[0] + s.val[1] + s.val[2];
+            score = score / (50 * 50 * 255);
+            score = 1- score;*/
+
+            double score = getPSNR(resizeImg1, resizeImg2);
             if (minError < score) {
                 minError = score;
                 imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
@@ -437,6 +457,49 @@ public class Panorama {
 
         cmp.set(imageName, minError);
         return cmp;
+    }
+
+
+    double getPSNR(Mat I1, Mat I2) {
+
+        int z = 5;
+        for (int i = 0; i < 50; i++) {
+            for (int j = 0; j < z; j++) {
+                I1.put(i, j, 0);
+                I1.put(i, 49 - j, 0);
+                I1.put(j, i, 0);
+                I1.put(49 - j, i, 0);
+            }
+        }
+
+        z = 5;
+
+        for (int i = 0; i < 50; i++) {
+            for (int j = 0; j < z; j++) {
+                I2.put(i, j, 0);
+                I2.put(i, 49 - j, 0);
+                I2.put(j, i, 0);
+                I2.put(49 - j, i, 0);
+            }
+        }
+
+        Mat s1 = new Mat();
+        absdiff(I1, I2, s1);       // |I1 - I2|
+        s1.convertTo(s1, CvType.CV_32F);  // cannot make a square on 8 bits
+        s1 = s1.mul(s1);           // |I1 - I2|^2
+
+        Scalar s = Core.sumElems(s1);         // sum elements per channel
+
+        double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
+
+        if( sse <= 1e-10) // for small values return zero
+            return 0;
+        else
+        {
+            double  mse =sse /(double)(I1.channels() * I1.total());
+            double psnr = 10.0*log10((255*255)/mse);
+            return psnr;
+        }
     }
 
     public boolean isExternalStorageWritable() {
@@ -484,6 +547,79 @@ public class Panorama {
         }
 
 
+    }
+
+    Scalar getMSSIM(Mat I1, Mat I2) {
+        double C1 = 6.5025, C2 = 58.5225;
+        /***************************** INITS **********************************/
+
+        I1.convertTo(I1, CvType.CV_32F);           // cannot calculate on one byte large values
+        I2.convertTo(I2, CvType.CV_32F);
+
+        Mat I2_2 = I2.mul(I2);        // I2^2
+        Mat I1_2 = I1.mul(I1);        // I1^2
+        Mat I1_I2 = I1.mul(I2);        // I1 * I2
+
+        /*************************** END INITS **********************************/
+
+        Mat mu1 = new Mat();
+        Mat mu2 = new Mat();   // PRELIMINARY COMPUTING
+        GaussianBlur(I1, mu1, new Size(11, 11), 1.5);
+        GaussianBlur(I2, mu2, new Size(11, 11), 1.5);
+
+        Mat mu1_2 = mu1.mul(mu1);
+        Mat mu2_2 = mu2.mul(mu2);
+        Mat mu1_mu2 = mu1.mul(mu2);
+
+        Mat sigma1_2 = new Mat();
+        Mat sigma2_2 = new Mat();
+        Mat sigma12 = new Mat();
+
+        GaussianBlur(I1_2, sigma1_2, new Size(11, 11), 1.5);
+        Core.subtract(sigma1_2, mu1_2, sigma1_2);
+
+        GaussianBlur(I2_2, sigma2_2, new Size(11, 11), 1.5);
+        Core.subtract(sigma2_2, mu2_2, sigma2_2);
+
+        GaussianBlur(I1_I2, sigma12, new Size(11, 11), 1.5);
+        Core.subtract(sigma12, mu1_mu2, sigma12);
+
+        ///////////////////////////////// FORMULA ////////////////////////////////
+        Mat t1 = new Mat();
+        Mat t2 = new Mat();
+        Mat t3 = new Mat();
+
+        Scalar alpha = new Scalar(2);
+        //t1 = 2 * mu1_mu2 + C1;
+        Core.multiply(mu1_mu2, alpha, t1);
+        Scalar sc1 = new Scalar(C1);
+        Core.add(t1, sc1, t1);
+
+        //t2 = 2 * sigma12 + C2;
+        Core.multiply(sigma12, alpha, t2);
+        Scalar sc2 = new Scalar(C2);
+        Core.add(t2, sc2, t2);
+
+        t3 = t1.mul(t2);              // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+
+        //t1 = mu1_2 + mu2_2 + C1;
+        Core.add(mu1_2, mu2_2, t1);
+        Core.add(t1, sc1, t1);
+
+        //t2 = sigma1_2 + sigma2_2 + C2;
+        Core.add(sigma1_2, sigma2_2, t2);
+        Core.add(t2, sc2, t2);
+
+        t1 = t1.mul(t2);               // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+
+        Mat ssim_map = new Mat();
+        divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
+
+        Scalar mssim = mean(ssim_map); // mssim = average of ssim map
+
+        //return mssim.val[0];
+
+        return mssim;
     }
 
 }

@@ -200,7 +200,7 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
 
         Bitmap bitmap = ((BitmapDrawable) image.getDrawable()).getBitmap();
 
-        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, 100);
+        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
     }
 
@@ -229,7 +229,9 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
                     return;
                 }
 
-                getPanorama(files);
+                getPanorama(files,true);
+                //getPanorama(files,false);
+
                 panorama.combineImagesInRow(tmp_well_dir, tmp_out_dir);
                 Bitmap bmp = panorama.generatePanorama(tmp_out_dir, tmp_panorama_dir);
 
@@ -333,21 +335,23 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
     }
 
 
-    private void getPanorama(List<String> files) {
-        tmp_well_dir = "tmp_well_dir/";
-        tmp_out_dir = "tmp_out_dir/";
-        tmp_panorama_dir = "tmp_panorama_dir/";
+    private void getPanorama(List<String> files, boolean isFirst) {
 
-        tmp_well_dir = panorama.getPublicAlbumStorageDir(tmp_well_dir, prefManager);
-        tmp_out_dir = panorama.getPublicAlbumStorageDir(tmp_out_dir, prefManager);
-        tmp_panorama_dir = panorama.getPublicAlbumStorageDir(tmp_panorama_dir, prefManager);
+        if(isFirst) {
+            tmp_well_dir = "tmp_well_dir/";
+            tmp_out_dir = "tmp_out_dir/";
+            tmp_panorama_dir = "tmp_panorama_dir/";
 
+            tmp_well_dir = panorama.getPublicAlbumStorageDir(tmp_well_dir, prefManager);
+            tmp_out_dir = panorama.getPublicAlbumStorageDir(tmp_out_dir, prefManager);
+            tmp_panorama_dir = panorama.getPublicAlbumStorageDir(tmp_panorama_dir, prefManager);
+        }
         if (files != null) {
             for (String filepath : files) {
                 File imgFile = new File(filepath);
                 Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
                 imgDecodableString = imgFile.getAbsolutePath();
-                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, 100);
+                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, isFirst);
             }
         }
     }
