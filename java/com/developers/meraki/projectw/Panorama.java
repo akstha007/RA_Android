@@ -24,6 +24,7 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
@@ -39,15 +40,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.Math.log10;
 import static org.opencv.core.Core.absdiff;
+import static org.opencv.core.Core.divide;
+import static org.opencv.core.Core.mean;
 import static org.opencv.imgproc.Imgproc.ADAPTIVE_THRESH_MEAN_C;
+import static org.opencv.imgproc.Imgproc.GaussianBlur;
 import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
 import static org.opencv.imgproc.Imgproc.adaptiveThreshold;
+import static org.opencv.imgproc.Imgproc.threshold;
 
 public class Panorama {
     private Context context;
     private static String LOG_TAG = "Panorama";
     private static PrefManager prefManager;
+    private Map<String, String> map = new HashMap<String, String>();
 
     private String[][] well_plate = {
             {"a", "y", "z", "d", "e", "f"},
@@ -121,6 +128,9 @@ public class Panorama {
         String rowImageName = "panorama";
         saveImage(dirPathOut, rowImageName, res);
 
+        //delete map values
+        map.clear();
+
         return res;
     }
 
@@ -189,17 +199,18 @@ public class Panorama {
         // Get the directory for the user's public pictures directory.
         File file = null;
 
-        if(prefManager.getIntValue("isFirstTime")==0){
+        if (prefManager.getIntValue("isFirstTime") == 0) {
             file = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_PICTURES), albumName);
-        }else{
+        } else {
             String path = prefManager.getStringValue("root_path");
             file = new File(path, albumName);
+
+            if (file.exists()) {
+                deleteOldFolder(file.getAbsolutePath());
+            }
         }
 
-        if (file.exists()) {
-            deleteOldFolder(file.getAbsolutePath());
-        }
         if (!file.mkdirs()) {
             Log.e(LOG_TAG, "Directory not created");
         }
@@ -246,9 +257,18 @@ public class Panorama {
     }
 
 
-    public Bitmap getContourArea(Bitmap bmp, boolean is_menu_image, String imgDecodableString, String tmp_well_dir, TextView txtResultWellPlate) {
+    public Bitmap getContour(Bitmap bmp, boolean is_menu_image, String imgDecodableString, String tmp_well_dir, TextView txtResultWellPlate) {
+        Bitmap bitmap = null;
+        for (int i = 80; i < 150; i = i + 10) {
+            bitmap = getContourArea(bmp, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
+        }
 
-        Map<String, String> map = new HashMap<String, String>();
+        return bitmap;
+    }
+
+
+    public Bitmap getContourArea(Bitmap bmp, boolean is_menu_image, String imgDecodableString,
+                                 String tmp_well_dir, TextView txtResultWellPlate, boolean isFirst) {
 
         Mat src = new Mat();
         Mat resizeSrc = new Mat();
@@ -262,22 +282,23 @@ public class Panorama {
         String rotation = prefManager.getStringValue("rotation");
 
         if (bmp.getWidth() > bmp.getHeight()) {
-            //rotate image by 90
-            //Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
-            if (rotation == "clockwise") {
-                Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
-            } else if (rotation == "anticlockwise") {
+            if (rotation.equalsIgnoreCase("anticlockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
+            } else if (rotation.equalsIgnoreCase("clockwise")) {
+                Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
             }
+
             bmp_w = 240;
             bmp_h = bmp_w * bmp.getWidth() / bmp.getHeight();
         }
 
         Mat gray = new Mat();
-        org.opencv.core.Size sz = new org.opencv.core.Size(bmp_w, bmp_h);
+        Mat binary = new Mat();
+        Size sz = new Size(bmp_w, bmp_h);
         Imgproc.resize(src, resizeSrc, sz);
         Imgproc.cvtColor(resizeSrc, gray, Imgproc.COLOR_RGBA2GRAY);
-        adaptiveThreshold(gray, gray, 200, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
+        //Imgproc.threshold(gray, binary, 128, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        adaptiveThreshold(gray, binary, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
 
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Mat hierarchy = new Mat();
@@ -289,7 +310,8 @@ public class Panorama {
 
         CompareResult cmp = new CompareResult();
 
-        Imgproc.findContours(gray, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(binary, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+
         for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
             Mat contour = contours.get(contourIdx);
             double contourArea = Imgproc.contourArea(contour);
@@ -315,7 +337,7 @@ public class Panorama {
                     if (r_w > 1.5 && r_w < 2.5 && r_h > 1.5 && r_h < 2.5) {
 
                         Mat imCrop = new Mat(resizeSrc, rect);
-                        cmp = compareImages(imCrop);
+                        cmp = compareImages(imCrop, isFirst);
 
                         /*Imgproc.rectangle(resizeSrc, rect.tl(), rect.br(), new Scalar(255, 0, 0, .8), 2);
                         putText(resizeSrc, "" + sim, new Point(rect.x, rect.y),
@@ -340,6 +362,7 @@ public class Panorama {
 
         if (rectCrop != null) {
             Mat image_roi = new Mat(resizeSrc, rectCrop);
+            //Mat image_roi = new Mat(binary, rectCrop);
             bmp = Bitmap.createBitmap(image_roi.cols(), image_roi.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(image_roi, bmp);
 
@@ -354,8 +377,8 @@ public class Panorama {
                 double minError = cmp.getSimilarity();
 
                 if (map.containsKey(imageName)) {
-                    double error = Double.parseDouble(map.get(imageName));
-                    if (error > minError) {
+                    double score = Double.parseDouble(map.get(imageName));
+                    if (score < minError) {
                         map.put(imageName, "" + minError);
                         saveImage(tmp_well_dir, imageName, bmp);
                     }
@@ -364,7 +387,11 @@ public class Panorama {
                     saveImage(tmp_well_dir, imageName, bmp);
                 }
             }
-        }
+        }/*else{
+            Mat image_roi = binary;
+            bmp = Bitmap.createBitmap(image_roi.cols(), image_roi.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(image_roi, bmp);
+        }*/
 
         if (!is_menu_image) {
             return null;
@@ -372,6 +399,115 @@ public class Panorama {
 
         txtResultWellPlate.setText(result);
         return bmp;
+    }
+
+    public CompareResult compareImages(Mat img1, Boolean isFirst) {
+        //resize the images
+        Mat resizeImg1 = new Mat();
+        org.opencv.core.Size sz = new org.opencv.core.Size(50, 50);
+        Imgproc.resize(img1, resizeImg1, sz);
+        Imgproc.cvtColor(resizeImg1, resizeImg1, Imgproc.COLOR_RGBA2GRAY);
+        //adaptiveThreshold(resizeImg1, resizeImg1, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+        Imgproc.threshold(resizeImg1, resizeImg1, 90, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+
+        double minError = 0;
+        String imageName = "";
+
+        CompareResult cmp = new CompareResult();
+
+        for (int i = 0; i < rawImages.length; i++) {
+
+            String imgname = "" + (char) (rawImages[i][1] + 'a' - 1);
+            if (!isFirst && map.containsKey(imgname)) {
+                continue;
+            }
+
+            InputStream imageStream = context.getResources().openRawResource(rawImages[i][0]);
+            Bitmap bitmap = BitmapFactory.decodeStream(imageStream);
+            Mat img2 = new Mat();
+            Utils.bitmapToMat(bitmap, img2);
+            Imgproc.resize(img2, img2, sz);
+
+            Mat resizeImg2 = new Mat();
+            Imgproc.resize(img2, resizeImg2, sz);
+            Imgproc.cvtColor(resizeImg2, resizeImg2, Imgproc.COLOR_RGBA2GRAY);
+            //adaptiveThreshold(resizeImg2, resizeImg2, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
+            Imgproc.threshold(resizeImg2, resizeImg2, 80, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+
+
+           /* Mat s1 = new Mat();
+            double score = 0;
+            absdiff(resizeImg1, resizeImg2, s1);
+            s1.convertTo(s1, CvType.CV_32F);
+
+            Scalar s = Core.sumElems(s1);
+
+            //Scalar s = getMSSIM(resizeImg1,resizeImg2);
+
+            score = s.val[0] + s.val[1] + s.val[2];
+            score = score / (50 * 50 * 255);
+            score = 1- score;*/
+
+            double score = getPSNR(resizeImg1, resizeImg2);
+            if (minError < score) {
+                minError = score;
+                imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
+            }
+        }
+
+        cmp.set(imageName, minError);
+        return cmp;
+    }
+
+
+    double getPSNR(Mat I1, Mat I2) {
+
+        int z = 5;
+        for (int i = 0; i < 50; i++) {
+            for (int j = 0; j < z; j++) {
+                I1.put(i, j, 0);
+                I1.put(i, 49 - j, 0);
+                I1.put(j, i, 0);
+                I1.put(49 - j, i, 0);
+            }
+        }
+
+        z = 5;
+
+        for (int i = 0; i < 50; i++) {
+            for (int j = 0; j < z; j++) {
+                I2.put(i, j, 0);
+                I2.put(i, 49 - j, 0);
+                I2.put(j, i, 0);
+                I2.put(49 - j, i, 0);
+            }
+        }
+
+        Mat s1 = new Mat();
+        absdiff(I1, I2, s1);       // |I1 - I2|
+        s1.convertTo(s1, CvType.CV_32F);  // cannot make a square on 8 bits
+        s1 = s1.mul(s1);           // |I1 - I2|^2
+
+        Scalar s = Core.sumElems(s1);         // sum elements per channel
+
+        double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
+
+        if( sse <= 1e-10) // for small values return zero
+            return 0;
+        else
+        {
+            double  mse =sse /(double)(I1.channels() * I1.total());
+            double psnr = 10.0*log10((255*255)/mse);
+            return psnr;
+        }
+    }
+
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
     public void vid2Frame(String input, String output, int frame_rate, TextView txtResultWellPlate) {
@@ -390,10 +526,10 @@ public class Panorama {
         try {
             retriever.setDataSource(file.getAbsolutePath());
             String time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            int videoDuration = Integer.parseInt(time)/1000;
+            int videoDuration = Integer.parseInt(time) / 1000;
 
             for (int i = 0; i < videoDuration; i += frame_rate) {
-                Bitmap frame = retriever.getFrameAtTime(i*1000000, MediaMetadataRetriever.OPTION_CLOSEST);
+                Bitmap frame = retriever.getFrameAtTime(i * 1000000, MediaMetadataRetriever.OPTION_CLOSEST);
                 saveImage(output, "frame" + frame_number, frame);
                 frame_number++;
             }
@@ -413,64 +549,77 @@ public class Panorama {
 
     }
 
-    public CompareResult compareImages(Mat img1) {
-        //resize the images
-        Mat resizeImg1 = new Mat();
-        org.opencv.core.Size sz = new org.opencv.core.Size(50, 50);
-        Imgproc.resize(img1, resizeImg1, sz);
-        Imgproc.cvtColor(resizeImg1, resizeImg1, Imgproc.COLOR_RGBA2GRAY);
-        adaptiveThreshold(resizeImg1, resizeImg1, 1, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
+    Scalar getMSSIM(Mat I1, Mat I2) {
+        double C1 = 6.5025, C2 = 58.5225;
+        /***************************** INITS **********************************/
 
-        double minError = 200;
-        String imageName = "";
-        int sim = 0;
+        I1.convertTo(I1, CvType.CV_32F);           // cannot calculate on one byte large values
+        I2.convertTo(I2, CvType.CV_32F);
 
-        CompareResult cmp = new CompareResult();
+        Mat I2_2 = I2.mul(I2);        // I2^2
+        Mat I1_2 = I1.mul(I1);        // I1^2
+        Mat I1_I2 = I1.mul(I2);        // I1 * I2
 
-        for (int i = 0; i < rawImages.length; i++) {
+        /*************************** END INITS **********************************/
 
-            InputStream imageStream = context.getResources().openRawResource(rawImages[i][0]);
-            Bitmap bitmap = BitmapFactory.decodeStream(imageStream);
-            Mat img2 = new Mat();
-            Utils.bitmapToMat(bitmap, img2);
-            Imgproc.resize(img2, img2, sz);
+        Mat mu1 = new Mat();
+        Mat mu2 = new Mat();   // PRELIMINARY COMPUTING
+        GaussianBlur(I1, mu1, new Size(11, 11), 1.5);
+        GaussianBlur(I2, mu2, new Size(11, 11), 1.5);
 
-            Mat resizeImg2 = new Mat();
-            Imgproc.resize(img2, resizeImg2, sz);
-            Imgproc.cvtColor(resizeImg2, resizeImg2, Imgproc.COLOR_RGBA2GRAY);
-            adaptiveThreshold(resizeImg2, resizeImg2, 1, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
+        Mat mu1_2 = mu1.mul(mu1);
+        Mat mu2_2 = mu2.mul(mu2);
+        Mat mu1_mu2 = mu1.mul(mu2);
 
-            Mat s1 = new Mat();
-            absdiff(resizeImg1, resizeImg2, s1);       // |I1 - I2|
-            s1.convertTo(s1, CvType.CV_32F);  // cannot make a square on 8 bits
-            s1 = s1.mul(s1);           // |I1 - I2|^2
+        Mat sigma1_2 = new Mat();
+        Mat sigma2_2 = new Mat();
+        Mat sigma12 = new Mat();
 
-            Scalar s = Core.sumElems(s1);        // sum elements per channel
-            double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
-            double mse = 0;
-            if (sse <= 1e-10) // for small values return zero
-                mse = 0;
-            else {
-                mse = sse / (double) (resizeImg1.channels() * resizeImg1.total());
-                //mse = 10.0 * Math.log10((255 * 255) / mse);
-            }
-            if (minError > mse) {
-                minError = mse;
-                imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
-            }
-        }
+        GaussianBlur(I1_2, sigma1_2, new Size(11, 11), 1.5);
+        Core.subtract(sigma1_2, mu1_2, sigma1_2);
 
-        //cmp.set(imageName, minError);
-        cmp.set(imageName, sim);
-        return cmp;
-    }
+        GaussianBlur(I2_2, sigma2_2, new Size(11, 11), 1.5);
+        Core.subtract(sigma2_2, mu2_2, sigma2_2);
 
-    public boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
+        GaussianBlur(I1_I2, sigma12, new Size(11, 11), 1.5);
+        Core.subtract(sigma12, mu1_mu2, sigma12);
+
+        ///////////////////////////////// FORMULA ////////////////////////////////
+        Mat t1 = new Mat();
+        Mat t2 = new Mat();
+        Mat t3 = new Mat();
+
+        Scalar alpha = new Scalar(2);
+        //t1 = 2 * mu1_mu2 + C1;
+        Core.multiply(mu1_mu2, alpha, t1);
+        Scalar sc1 = new Scalar(C1);
+        Core.add(t1, sc1, t1);
+
+        //t2 = 2 * sigma12 + C2;
+        Core.multiply(sigma12, alpha, t2);
+        Scalar sc2 = new Scalar(C2);
+        Core.add(t2, sc2, t2);
+
+        t3 = t1.mul(t2);              // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+
+        //t1 = mu1_2 + mu2_2 + C1;
+        Core.add(mu1_2, mu2_2, t1);
+        Core.add(t1, sc1, t1);
+
+        //t2 = sigma1_2 + sigma2_2 + C2;
+        Core.add(sigma1_2, sigma2_2, t2);
+        Core.add(t2, sc2, t2);
+
+        t1 = t1.mul(t2);               // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+
+        Mat ssim_map = new Mat();
+        divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
+
+        Scalar mssim = mean(ssim_map); // mssim = average of ssim map
+
+        //return mssim.val[0];
+
+        return mssim;
     }
 
 }

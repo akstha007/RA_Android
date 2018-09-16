@@ -1,6 +1,12 @@
 package com.developers.meraki.projectw;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -10,10 +16,16 @@ import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.session.MediaController;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -52,7 +64,7 @@ import static org.opencv.imgproc.Imgproc.ADAPTIVE_THRESH_MEAN_C;
 import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
 import static org.opencv.imgproc.Imgproc.adaptiveThreshold;
 
-public class VideoActivity extends AppCompatActivity implements View.OnClickListener {
+public class VideoActivity extends AppCompatActivity implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
     private Button btnImage;
     private TextView txtResultWellPlate;
@@ -72,6 +84,7 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
     private Map<String, String> map = new HashMap<String, String>();
     private Panorama panorama;
     private PrefManager prefManager;
+    private final int REQUEST_DIR_PERMISSION = 101;
 
     static {
         System.loadLibrary("opencv_java3");
@@ -83,17 +96,25 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
         setContentView(R.layout.activity_main);
 
         initIds();
+        openDirectory();
+    }
+
+    private void openDirectory() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+        }
     }
 
     private void initIds() {
         prefManager = new PrefManager(this);
-        if(prefManager.getIntValue("isFirstTime")==0){
+        if (prefManager.getIntValue("isFirstTime") == 0) {
             //first time
             String path = Panorama.getPublicAlbumStorageDir("ProjectX", prefManager);
-            prefManager.setIntValue("isFirstTime",1);
-            prefManager.setIntValue("frame_rate",2);
-            prefManager.setStringValue("root_path",path);
-            prefManager.setStringValue("rotation","clockwise");
+            prefManager.setIntValue("isFirstTime", 1);
+            prefManager.setIntValue("frame_rate", 2);
+            prefManager.setStringValue("root_path", path);
+            prefManager.setStringValue("rotation", "clockwise");
         }
 
         btnImage = (Button) findViewById(R.id.btnProcessImage);
@@ -179,7 +200,7 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
 
         Bitmap bitmap = ((BitmapDrawable) image.getDrawable()).getBitmap();
 
-        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate);
+        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
     }
 
@@ -208,7 +229,9 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
                     return;
                 }
 
-                getPanorama(files);
+                getPanorama(files,true);
+                //getPanorama(files,false);
+
                 panorama.combineImagesInRow(tmp_well_dir, tmp_out_dir);
                 Bitmap bmp = panorama.generatePanorama(tmp_out_dir, tmp_panorama_dir);
 
@@ -312,22 +335,73 @@ public class VideoActivity extends AppCompatActivity implements View.OnClickList
     }
 
 
-    private void getPanorama(List<String> files) {
-        tmp_well_dir = "tmp_well_dir/";
-        tmp_out_dir = "tmp_out_dir/";
-        tmp_panorama_dir = "tmp_panorama_dir/";
+    private void getPanorama(List<String> files, boolean isFirst) {
 
-        tmp_well_dir = panorama.getPublicAlbumStorageDir(tmp_well_dir, prefManager);
-        tmp_out_dir = panorama.getPublicAlbumStorageDir(tmp_out_dir, prefManager);
-        tmp_panorama_dir = panorama.getPublicAlbumStorageDir(tmp_panorama_dir, prefManager);
+        if(isFirst) {
+            tmp_well_dir = "tmp_well_dir/";
+            tmp_out_dir = "tmp_out_dir/";
+            tmp_panorama_dir = "tmp_panorama_dir/";
 
+            tmp_well_dir = panorama.getPublicAlbumStorageDir(tmp_well_dir, prefManager);
+            tmp_out_dir = panorama.getPublicAlbumStorageDir(tmp_out_dir, prefManager);
+            tmp_panorama_dir = panorama.getPublicAlbumStorageDir(tmp_panorama_dir, prefManager);
+        }
         if (files != null) {
             for (String filepath : files) {
                 File imgFile = new File(filepath);
                 Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
                 imgDecodableString = imgFile.getAbsolutePath();
-                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate);
+                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, isFirst);
             }
         }
     }
+
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                REQUEST_DIR_PERMISSION);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_DIR_PERMISSION: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                } else {
+                    //permission not granted show error dialog
+                    showDialog();
+                }
+                return;
+            }
+        }
+    }
+
+    public void showDialog() {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.ThemeOverlay_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle("Permissions")
+                .setMessage("Permission Denied! App may not work properly if permission is not granted.")
+                .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+                        requestCameraPermission();
+                    }
+                })
+                .setNegativeButton("Deny", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(R.drawable.ic_dir)
+                .show();
+    }
+
 }
