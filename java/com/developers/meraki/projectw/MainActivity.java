@@ -1,84 +1,94 @@
 package com.developers.meraki.projectw;
 
-import android.content.Context;
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Camera;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.session.MediaController;
 import android.net.Uri;
-import android.provider.MediaStore;
-import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.File;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import android.widget.VideoView;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.videoio.VideoCapture;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 import static org.opencv.core.Core.absdiff;
 import static org.opencv.imgproc.Imgproc.ADAPTIVE_THRESH_MEAN_C;
 import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
 import static org.opencv.imgproc.Imgproc.adaptiveThreshold;
-import static org.opencv.imgproc.Imgproc.putText;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
     private Button btnImage;
     private TextView txtResultWellPlate;
     private String imgDecodableString = null;
+    private String vidDecodableString = null;
+    private VideoView videoView;
     private static int RESULT_LOAD_IMG = 1;
-    private static final int RESULT_IMAGE_PATH = 2;
-    ImageView image;
+    private static int RESULT_IMAGE_PATH = 2;
+    private static int RESULT_LOAD_VIDEO = 3;
+    private ImageView image;
+    private MediaController m;
+    private boolean is_menu_image = true;
+    private String LOG_TAG = "MainActivity";
+    private List<String> files;
+    private String tmp_well_dir, tmp_out_dir, tmp_panorama_dir;
+    private VideoPlayer videoPlayer;
+    private Map<String, String> map = new HashMap<String, String>();
+    private Panorama panorama;
+    private PrefManager prefManager;
+    private final int REQUEST_DIR_PERMISSION = 101;
 
     static {
         System.loadLibrary("opencv_java3");
     }
-
-    private int[][] rawImages = {
-            {R.raw.a, 1}, {R.raw.y, 25}, {R.raw.z, 26}, {R.raw.d, 4}, {R.raw.e, 5}, {R.raw.f, 6},
-            {R.raw.g, 7}, {R.raw.h, 8}, {R.raw.i, 9}, {R.raw.j, 10}, {R.raw.k, 11}, {R.raw.l, 12},
-            {R.raw.m, 13}, {R.raw.n, 14}, {R.raw.o, 15}, {R.raw.p, 16}, {R.raw.q, 17}, {R.raw.r, 18},
-            {R.raw.s, 19}, {R.raw.t, 20}, {R.raw.u, 21}, {R.raw.v, 22}, {R.raw.w, 23}, {R.raw.x, 24}
-    };
-
-    private int[][] rawImagesAlpha = {
-            {R.raw.a, R.raw.y, R.raw.z, R.raw.d, R.raw.e, R.raw.f},
-            {R.raw.g, R.raw.h, R.raw.i, R.raw.j, R.raw.k, R.raw.l},
-            {R.raw.m, R.raw.n, R.raw.o, R.raw.p, R.raw.q, R.raw.r},
-            {R.raw.s, R.raw.t, R.raw.u, R.raw.v, R.raw.w, R.raw.x}
-    };
-
-    private int[][] rawImagesNum = {
-            {1, 25, 26, 4, 5, 6},
-            {7, 8, 9, 10, 11, 12},
-            {13, 14, 15, 16, 17, 18},
-            {19, 20, 21, 22, 23, 24}
-    };
-
-    private int iindex = 0, jindex = 0;
-    private boolean isfirst = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,21 +96,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         initIds();
+        openDirectory();
+    }
+
+    private void openDirectory() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+        }
     }
 
     private void initIds() {
+        prefManager = new PrefManager(this);
+        if (prefManager.getIntValue("isFirstTime") == 0) {
+            //first time
+            String path = Panorama.getPublicAlbumStorageDir("ProjectX", prefManager);
+            prefManager.setIntValue("isFirstTime", 1);
+            prefManager.setIntValue("frame_rate", 2);
+            prefManager.setStringValue("root_path", path);
+            prefManager.setStringValue("rotation", "clockwise");
+        }
+
         btnImage = (Button) findViewById(R.id.btnProcessImage);
         txtResultWellPlate = (TextView) findViewById(R.id.txtResultWellplate);
         image = (ImageView) findViewById(R.id.imgWellPlate);
+        videoView = (VideoView) findViewById(R.id.videoView);
 
         btnImage.setOnClickListener(this);
+
+        videoPlayer = new VideoPlayer(this, videoView);
+        panorama = new Panorama(this);
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.btnProcessImage:
-                processImage();
+                if (is_menu_image) {
+                    processImage();
+                } else {
+                    processVideo();
+                }
                 break;
         }
     }
@@ -112,12 +148,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Intent intent = new Intent(getApplicationContext(), Camera2Activity.class);
                 startActivityForResult(intent, RESULT_IMAGE_PATH);
                 return true;
-            case R.id.menu_media:
+
+            case R.id.menu_image:
+                is_menu_image = true;
                 loadImagefromGallery();
+                updateUI();
                 return true;
+
+            case R.id.menu_video:
+                is_menu_image = false;
+                loadVideofromGallery();
+                updateUI();
+                return true;
+
+            case R.id.menu_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void updateUI() {
+        if (is_menu_image) {
+            image.setVisibility(View.VISIBLE);
+            videoView.setVisibility(View.GONE);
+        } else {
+            image.setVisibility(View.GONE);
+            videoView.setVisibility(View.VISIBLE);
+            btnImage.setText("Generate Panorama");
+        }
+        btnImage.setVisibility(View.VISIBLE);
+        txtResultWellPlate.setText("");
     }
 
     @Override
@@ -137,17 +200,69 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         Bitmap bitmap = ((BitmapDrawable) image.getDrawable()).getBitmap();
 
-        Bitmap bittmap = getContourArea(bitmap);
+        Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
+    }
+
+    private void processVideo() {
+        if (vidDecodableString == null || vidDecodableString.isEmpty() || vidDecodableString.equalsIgnoreCase("")) {
+            Toast.makeText(getApplicationContext(), "Error! Image not selected.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        btnImage.setText("Processing...");
+        btnImage.setClickable(false);
+        videoPlayer.pauseVideo();
+
+        final int frate = prefManager.getIntValue("frame_rate");
+
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                String path = panorama.getPublicAlbumStorageDir("frames", prefManager);
+                panorama.vid2Frame(vidDecodableString, "frames", frate, txtResultWellPlate);
+
+                files = panorama.getListFiles(path);
+                if (files == null) {
+                    Toast.makeText(getApplicationContext(), "Error! Images not found.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                getPanorama(files,true);
+                //getPanorama(files,false);
+
+                panorama.combineImagesInRow(tmp_well_dir, tmp_out_dir);
+                Bitmap bmp = panorama.generatePanorama(tmp_out_dir, tmp_panorama_dir);
+
+                image.setImageBitmap(bmp);
+                btnImage.setText("Process Image");
+                btnImage.setClickable(true);
+                btnImage.setVisibility(View.INVISIBLE);
+                //txtResultWellPlate.setText("Panorama Image generated!");
+
+                image.setVisibility(View.VISIBLE);
+                videoView.setVisibility(View.GONE);
+            }
+        }, 1000);
     }
 
     public void loadImagefromGallery() {
         // Create intent to Open Image applications like Gallery, Google Photos
         Intent galleryIntent = new Intent(Intent.ACTION_PICK,
-                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
         // Start the Intent
         startActivityForResult(galleryIntent, RESULT_LOAD_IMG);
+    }
+
+    public void loadVideofromGallery() {
+        // Create intent to Open Image applications like Gallery, Google Photos
+        Intent galleryIntent = new Intent(Intent.ACTION_PICK,
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+
+        // Start the Intent
+        startActivityForResult(galleryIntent, RESULT_LOAD_VIDEO);
     }
 
     @Override
@@ -188,144 +303,105 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 //getContourArea(myBitmap);
 
-                //Toast.makeText(this, "Path: " + imagePath, Toast.LENGTH_LONG).show();
+                //Toast.makeText(this, "Path-img: " + imagePath, Toast.LENGTH_LONG).show();
+            } else if (requestCode == RESULT_LOAD_VIDEO && resultCode == RESULT_OK && data != null) {
+                Uri selectedImage = data.getData();
+                String[] filePathColumn = {MediaStore.Video.Media.DATA};
+
+                // Get the cursor
+                Cursor cursor = getContentResolver().query(selectedImage,
+                        filePathColumn, null, null, null);
+
+                // Move to first row
+                cursor.moveToFirst();
+
+                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                vidDecodableString = cursor.getString(columnIndex);
+                cursor.close();
+
+                //String path = Environment.getExternalStorageDirectory().toString() + "/Pictures/img/";
+                //files = panorama.getListFiles(path);
+
+                //Toast.makeText(this, "Path: " + path, Toast.LENGTH_LONG).show();
+
+                videoPlayer.playVideo(vidDecodableString);
+                videoPlayer.pauseVideo();
+
             }
+
         } catch (Exception e) {
-            Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG)
-                    .show();
+            Toast.makeText(this, "Something went wrong!!! " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
-    private Bitmap getContourArea(Bitmap bmp) {
 
-        Mat src = new Mat();
-        Mat resizeSrc = new Mat();
-        Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
-        Utils.bitmapToMat(bmp32, src);
+    private void getPanorama(List<String> files, boolean isFirst) {
 
-        int bmp_w = 240;
-        int bmp_h = bmp_w * bmp.getHeight() / bmp.getWidth();
+        if(isFirst) {
+            tmp_well_dir = "tmp_well_dir/";
+            tmp_out_dir = "tmp_out_dir/";
+            tmp_panorama_dir = "tmp_panorama_dir/";
 
-        Mat gray = new Mat();
-        org.opencv.core.Size sz = new org.opencv.core.Size(bmp_w, bmp_h);
-        Imgproc.resize(src, resizeSrc, sz);
-        Imgproc.cvtColor(resizeSrc, gray, Imgproc.COLOR_RGBA2GRAY);
-        adaptiveThreshold(gray, gray, 200, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
+            tmp_well_dir = panorama.getPublicAlbumStorageDir(tmp_well_dir, prefManager);
+            tmp_out_dir = panorama.getPublicAlbumStorageDir(tmp_out_dir, prefManager);
+            tmp_panorama_dir = panorama.getPublicAlbumStorageDir(tmp_panorama_dir, prefManager);
+        }
+        if (files != null) {
+            for (String filepath : files) {
+                File imgFile = new File(filepath);
+                Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
+                imgDecodableString = imgFile.getAbsolutePath();
+                panorama.getContourArea(myBitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, isFirst);
+            }
+        }
+    }
 
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierarchy = new Mat();
-        double minArea = 1000, maxArea = 3000;
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                REQUEST_DIR_PERMISSION);
+    }
 
-        Rect rectCrop = null;
-        int well_w = 210, well_h = 210;
-        int img_w = gray.width(), img_h = gray.height();
-        String sim = "";
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_DIR_PERMISSION: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-        Imgproc.findContours(gray, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
-        for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
-            Mat contour = contours.get(contourIdx);
-            double contourArea = Imgproc.contourArea(contour);
+                } else {
+                    //permission not granted show error dialog
+                    showDialog();
+                }
+                return;
+            }
+        }
+    }
 
-            if (contourArea > minArea && contourArea < maxArea) {
-
-                Rect rect = Imgproc.boundingRect(contours.get(contourIdx));
-
-                int h = rect.height;
-                int w = rect.width;
-                //int y = rect.y + h / 2;
-                //int x = rect.x + w / 2;
-                int y = rect.y + 25;
-                int x = rect.x + 20;
-
-                //check size of rectangle
-                if (h > 30 && h < 50 && w > 30 && w < 50) {
-
-                    float r_w = (float)img_w / x;
-                    float r_h = (float)img_h / y;
-
-                    //check if the rectangle is within center of the image
-                    if(r_w > 1.5 && r_w < 2.5 && r_h > 1.5 && r_h < 2.5) {
-
-                        Mat imCrop = new Mat(resizeSrc, rect);
-                        sim = compareImages(imCrop);
-
-                        /*Imgproc.rectangle(resizeSrc, rect.tl(), rect.br(), new Scalar(255, 0, 0, .8), 2);
-                        putText(resizeSrc, "" + sim, new Point(rect.x, rect.y),
-                                Core.FONT_HERSHEY_DUPLEX, 1.0, new Scalar(0, 255, 0));
-                        rectCrop = rect;*/
-                        rectCrop = new Rect(x - well_w / 2, y - well_h / 2, well_w, well_h);
+    public void showDialog() {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.ThemeOverlay_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle("Permissions")
+                .setMessage("Permission Denied! App may not work properly if permission is not granted.")
+                .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+                        requestCameraPermission();
                     }
-
-                }
-            }
-        }
-
-        String result="No wells found!";
-
-        if (rectCrop != null) {
-            Mat image_roi = new Mat(resizeSrc, rectCrop);
-            bmp = Bitmap.createBitmap(image_roi.cols(), image_roi.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(image_roi, bmp);
-
-            result = "Well no.: ";
-            result += sim;
-            result += "\nPath: " + imgDecodableString;
-        }
-
-        txtResultWellPlate.setText(result);
-
-        return bmp;
+                })
+                .setNegativeButton("Deny", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // do nothing
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(R.drawable.ic_dir)
+                .show();
     }
 
-    private String compareImages(Mat img1) {
-
-        //resize the images
-        Mat resizeImg1 = new Mat();
-        org.opencv.core.Size sz = new org.opencv.core.Size(50, 50);
-        Imgproc.resize(img1, resizeImg1, sz);
-        Imgproc.cvtColor(resizeImg1, resizeImg1, Imgproc.COLOR_RGBA2GRAY);
-        adaptiveThreshold(resizeImg1, resizeImg1, 1, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
-
-        double minError = 200;
-        String imageName = "";
-
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 6; j++) {
-                InputStream imageStream = this.getResources().openRawResource(rawImagesAlpha[i][j]);
-                Bitmap bitmap = BitmapFactory.decodeStream(imageStream);
-                Mat img2 = new Mat();
-                Utils.bitmapToMat(bitmap, img2);
-                Imgproc.resize(img2, img2, sz);
-
-                Mat resizeImg2 = new Mat();
-                Imgproc.resize(img2, resizeImg2, sz);
-                Imgproc.cvtColor(resizeImg2, resizeImg2, Imgproc.COLOR_RGBA2GRAY);
-                adaptiveThreshold(resizeImg2, resizeImg2, 1, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 5);
-
-                Mat s1 = new Mat();
-                absdiff(resizeImg1, resizeImg2, s1);       // |I1 - I2|
-                s1.convertTo(s1, CvType.CV_32F);  // cannot make a square on 8 bits
-                s1 = s1.mul(s1);           // |I1 - I2|^2
-
-                Scalar s = Core.sumElems(s1);        // sum elements per channel
-                double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
-                double mse = 0;
-                if (sse <= 1e-10) // for small values return zero
-                    mse = 0;
-                else {
-                    mse = sse / (double) (resizeImg1.channels() * resizeImg1.total());
-                    //mse = 10.0 * Math.log10((255 * 255) / mse);
-                }
-                if (minError > mse) {
-                    minError = mse;
-                    imageName = "" + (char) (rawImagesNum[i][j] + 'A' - 1);
-                    iindex = i - 1;
-                    jindex = j - 1;
-                    isfirst = false;
-                }
-            }
-
-        }
-        return imageName;
-    }
 }
