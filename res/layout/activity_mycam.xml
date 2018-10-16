@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="7dp"
+    tools:context=".NativecamActivity"
+    android:background="#eee">
+
+
+    <ImageView
+        android:id="@+id/imageview"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="7dp"
+        android:layout_weight="1"
+        android:background="#fff"
+        />
+
+    <VideoView
+        android:id="@+id/videoView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="7dp"
+        android:layout_weight="1"
+        android:visibility="visible" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnPicture"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Picture"
+            android:layout_marginRight="10dp"/>
+
+        <Button
+            android:layout_marginLeft="10dp"
+            android:id="@+id/btnVideo"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Video" />
+
+    </LinearLayout>
+</LinearLayout>

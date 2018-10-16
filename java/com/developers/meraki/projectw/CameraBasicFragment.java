@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.developers.meraki.projectw;
+    package com.developers.meraki.projectw;
 
 import android.Manifest;
 import android.app.Activity;
@@ -75,9 +75,7 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static android.app.Activity.RESULT_OK;
-
-public class Camera2BasicFragment extends Fragment
+public class CameraBasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
     /**
@@ -389,7 +387,7 @@ public class Camera2BasicFragment extends Fragment
      * @return The optimal {@code Size}, or an arbitrary one if none were big enough
      */
     private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
-                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
+            int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
 
         // Collect the supported resolutions that are at least as big as the preview Surface
         List<Size> bigEnough = new ArrayList<>();
@@ -401,7 +399,7 @@ public class Camera2BasicFragment extends Fragment
             if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
                     option.getHeight() == option.getWidth() * h / w) {
                 if (option.getWidth() >= textureViewWidth &&
-                        option.getHeight() >= textureViewHeight) {
+                    option.getHeight() >= textureViewHeight) {
                     bigEnough.add(option);
                 } else {
                     notBigEnough.add(option);
@@ -421,8 +419,8 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    public static Camera2BasicFragment newInstance() {
-        return new Camera2BasicFragment();
+    public static CameraBasicFragment newInstance() {
+        return new CameraBasicFragment();
     }
 
     @Override
@@ -606,7 +604,7 @@ public class Camera2BasicFragment extends Fragment
     }
 
     /**
-     * Opens the camera specified by {@link Camera2BasicFragment#mCameraId}.
+     * Opens the camera specified by {@link CameraBasicFragment#mCameraId}.
      */
     private void openCamera(int width, int height) {
         if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
@@ -1048,7 +1046,7 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
-    private File getOutputMediaFile(int type) {
+    private File getOutputMediaFile(int type){
         /*if(!checkSDCardStatus()){
             return null;
         }*/
@@ -1056,8 +1054,8 @@ public class Camera2BasicFragment extends Fragment
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "ProjectX/DCIM");
 
-        if (!mediaStorageDir.exists()) {
-            if (!mediaStorageDir.mkdirs()) {
+        if (! mediaStorageDir.exists()){
+            if (! mediaStorageDir.mkdirs()){
                 Log.d(TAG, "Error! Failed to create directory");
                 return null;
             }
@@ -1065,9 +1063,9 @@ public class Camera2BasicFragment extends Fragment
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         File mediaFile;
-        if (type == MEDIA_TYPE_IMAGE) {
+        if (type == MEDIA_TYPE_IMAGE){
             mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-                    "IMG_" + timeStamp + ".jpg");
+                    "IMG_"+ timeStamp + ".jpg");
         } else {
             return null;
         }

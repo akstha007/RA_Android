@@ -21,7 +21,18 @@
         android:id="@+id/menu_camera"
         android:icon="@drawable/ic_camera"
         android:title="Camera"
-        app:showAsAction="always" />
+        app:showAsAction="always" >
+        <menu>
+            <item
+                android:id="@+id/menu_image_cam"
+                android:icon="@drawable/ic_pic"
+                android:title="Image" />
+            <item
+                android:id="@+id/menu_video_cam"
+                android:icon="@drawable/ic_vid"
+                android:title="Video" />
+        </menu>
+    </item>
     <item
         android:id="@+id/menu_settings"
         android:title="Settings"

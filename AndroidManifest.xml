@@ -4,11 +4,15 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.RECORD_VIDEO" />
 
     <application
         android:allowBackup="true"
@@ -25,11 +29,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".VideoActivity" />
         <activity
-            android:name=".CameraActivity"
-            android:label="Camera"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+            android:name=".VideoActivity"
+            android:theme="@style/MaterialTheme" />
         <activity
             android:name=".ImageActivity"
             android:label="Image Processing" />
@@ -39,6 +41,21 @@
         <activity
             android:name=".SettingsActivity"
             android:label="Settings" />
+
+        <activity
+            android:name=".NativecamActivity"
+            android:label="Camera" />
+
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="com.developers.meraki.projectw"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+
     </application>
 
 </manifest>
