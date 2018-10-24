@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_camera"
+            android:icon="@drawable/ic_cam"
+            android:title="Camera" />
+        <item
+            android:id="@+id/nav_video"
+            android:icon="@drawable/ic_vid"
+            android:title="Video" />
+        <item
+            android:id="@+id/nav_gallery_pic"
+            android:icon="@drawable/ic_photogallery"
+            android:title="Gallery Picture" />
+        <item
+            android:id="@+id/nav_gallery_vid"
+            android:icon="@drawable/ic_vidgallery"
+            android:title="Gallery Video" />
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings1"
+            android:title="Settings" />
+    </group>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_share"
+                android:icon="@drawable/ic_share"
+                android:title="Share" />
+            <item
+                android:id="@+id/nav_rateus"
+                android:icon="@drawable/ic_rateus"
+                android:title="Rate Us" />
+            <item
+                android:id="@+id/nav_about"
+                android:icon="@drawable/ic_about"
+                android:title="About Us" />
+        </menu>
+    </item>
+
+</menu>

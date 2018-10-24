@@ -408,7 +408,8 @@ public class Panorama {
         Imgproc.resize(img1, resizeImg1, sz);
         Imgproc.cvtColor(resizeImg1, resizeImg1, Imgproc.COLOR_RGBA2GRAY);
         //adaptiveThreshold(resizeImg1, resizeImg1, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
-        Imgproc.threshold(resizeImg1, resizeImg1, 90, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        //Imgproc.threshold(resizeImg1, resizeImg1, 90, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        Imgproc.threshold(resizeImg1, resizeImg1, 90, 255, Imgproc.THRESH_BINARY);
 
         double minError = 0;
         String imageName = "";
@@ -432,7 +433,8 @@ public class Panorama {
             Imgproc.resize(img2, resizeImg2, sz);
             Imgproc.cvtColor(resizeImg2, resizeImg2, Imgproc.COLOR_RGBA2GRAY);
             //adaptiveThreshold(resizeImg2, resizeImg2, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 11, 5);
-            Imgproc.threshold(resizeImg2, resizeImg2, 80, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+            //Imgproc.threshold(resizeImg2, resizeImg2, 80, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+            Imgproc.threshold(resizeImg2, resizeImg2, 80, 255, Imgproc.THRESH_BINARY);
 
 
            /* Mat s1 = new Mat();

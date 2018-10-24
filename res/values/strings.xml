@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Project X</string>
+    <string name="app_name">mScanner</string>
     <string name="picture">Picture</string>
     <string name="description_info">Info</string>
     <string name="request_permission">This sample needs camera permission.</string>
@@ -14,4 +14,16 @@
         <item>Clockwise</item>
         <item>Anti-clockwise</item>
     </string-array>
+    <string name="title_activity_home">HomeActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Project X</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+
+    <!--About page-->
+    <string name="copyright">&#169; 2018 Mobile Scanner.\nAll rights reserved.</string>
+    <string name="licence"><u>LICENCES</u></string>
 </resources>

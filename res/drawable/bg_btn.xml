@@ -4,7 +4,7 @@
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="10dp" />
-            <solid android:color="@color/qtitleR" />
+            <solid android:color="@color/colorPrimaryDark" />
             <!--shadow Color-->
         </shape>
     </item>
@@ -16,7 +16,7 @@
         android:top="0dp">
         <shape android:shape="rectangle">
             <corners android:radius="10dp" />
-            <solid android:color="@color/houseR" />
+            <solid android:color="@color/colorPrimary" />
         </shape>
     </item>
 
