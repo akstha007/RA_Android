@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.session.MediaController;
 import android.net.Uri;
@@ -32,11 +33,17 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.animation.RotateAnimation;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.Mat;
 
 import java.io.File;
 import java.io.IOException;
@@ -72,6 +79,8 @@ public class HomeActivity extends AppCompatActivity
     static final int REQUEST_TAKE_PHOTO = 402;
     static final int REQUEST_VIDEO_CAPTURE = 101;
     String mCurrentPhotoPath;
+    private ImageButton btnClock, btnAnticlock;
+    private int mCurrRotation = 0;
 
     static {
         System.loadLibrary("opencv_java3");
@@ -225,8 +234,12 @@ public class HomeActivity extends AppCompatActivity
         txtResultWellPlate = (TextView) findViewById(R.id.txtResultWellplate);
         image = (ImageView) findViewById(R.id.imgWellPlate);
         videoView = (VideoView) findViewById(R.id.videoView);
+        btnClock = (ImageButton) findViewById(R.id.btnClockwise);
+        btnAnticlock = (ImageButton) findViewById(R.id.btnAntiClockwise);
 
         btnImage.setOnClickListener(this);
+        btnClock.setOnClickListener(this);
+        btnAnticlock.setOnClickListener(this);
 
         videoPlayer = new VideoPlayer(this, videoView);
         panorama = new Panorama(this);
@@ -254,7 +267,53 @@ public class HomeActivity extends AppCompatActivity
                 Log.d(LOG_TAG,"Duration: "+duration);
                 */
                 break;
+
+            case R.id.btnClockwise:
+                rotateView(90);
+                //image.setRotation(image.getRotation() + 90);
+                //Toast.makeText(this, "Clockwise", Toast.LENGTH_SHORT).show();
+                break;
+
+            case R.id.btnAntiClockwise:
+                rotateView(-90);
+                //image.setRotation(image.getRotation() - 90);
+                //Toast.makeText(this, "Anti-Clockwise", Toast.LENGTH_SHORT).show();
+                break;
         }
+    }
+
+    private void rotateView(int angle) {
+        mCurrRotation %= 360;
+
+        float fromRotation = mCurrRotation;
+        float toRotation = mCurrRotation += angle;
+        /*
+        final RotateAnimation rotateAnim = new RotateAnimation(
+                fromRotation, toRotation, image.getWidth()/2, image.getHeight()/2);
+
+        rotateAnim.setDuration(1000); // Use 0 ms to rotate instantly
+        rotateAnim.setFillAfter(true); // Must be true or the animation will reset
+
+        image.startAnimation(rotateAnim);*/
+
+        Mat src = new Mat();
+        Bitmap bitmap = ((BitmapDrawable) image.getDrawable()).getBitmap();
+        Bitmap bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Utils.bitmapToMat(bmp32, src);
+
+        if (angle == -90) {
+            Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
+        } else if (angle == 90) {
+            Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
+        }
+
+        //Utils.matToBitmap(src, bmp32);
+
+        Bitmap bmp = Bitmap.createBitmap(src.cols(), src.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(src, bmp);
+
+        image.setImageBitmap(bmp);
+
     }
 
     private void updateUI() {
@@ -282,6 +341,8 @@ public class HomeActivity extends AppCompatActivity
 
         Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
+
+        Toast.makeText(this, "W:" + bitmap.getWidth() + " H:" + bitmap.getHeight(), Toast.LENGTH_SHORT).show();
     }
 
     private void processVideo() {
@@ -310,7 +371,7 @@ public class HomeActivity extends AppCompatActivity
                 }
 
                 //long startTime = System.nanoTime();
-                getPanorama(files,true);
+                getPanorama(files, true);
 
                 panorama.combineImagesInRow(tmp_well_dir, tmp_out_dir);
                 Bitmap bmp = panorama.generatePanorama(tmp_out_dir, tmp_panorama_dir);
@@ -412,7 +473,7 @@ public class HomeActivity extends AppCompatActivity
                 videoPlayer.playVideo(vidDecodableString);
                 videoPlayer.pauseVideo();
 
-            }else if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
+            } else if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
                 galleryAddPic();
                 setPic();
             } else if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
@@ -435,8 +496,7 @@ public class HomeActivity extends AppCompatActivity
                 Bitmap myBitmap = BitmapFactory.decodeFile(imgDecodableString);
                 image.setImageBitmap(myBitmap);
 
-            }
-            else if (requestCode == REQUEST_VIDEO_CAPTURE && resultCode == RESULT_OK) {
+            } else if (requestCode == REQUEST_VIDEO_CAPTURE && resultCode == RESULT_OK) {
             /*Uri videoUri = data.getData();
             mVideoView.setVideoURI(videoUri);*/
 
@@ -466,7 +526,7 @@ public class HomeActivity extends AppCompatActivity
 
     private void getPanorama(List<String> files, boolean isFirst) {
 
-        if(isFirst) {
+        if (isFirst) {
             tmp_well_dir = "tmp_well_dir/";
             tmp_out_dir = "tmp_out_dir/";
             tmp_panorama_dir = "tmp_panorama_dir/";
@@ -543,7 +603,7 @@ public class HomeActivity extends AppCompatActivity
             try {
                 photoFile = createImageFile();
             } catch (IOException ex) {
-                Log.d(LOG_TAG,ex.getMessage());
+                Log.d(LOG_TAG, ex.getMessage());
             }
 
             // Continue only if the File was successfully created
@@ -585,7 +645,7 @@ public class HomeActivity extends AppCompatActivity
         int photoH = bmOptions.outHeight;
 
         // Determine how much to scale down the image
-        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+        int scaleFactor = Math.min(photoW / targetW, photoH / targetH);
 
         // Decode the image file into a Bitmap sized to fill the View
         bmOptions.inJustDecodeBounds = false;

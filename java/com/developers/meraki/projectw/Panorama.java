@@ -282,11 +282,12 @@ public class Panorama {
         String rotation = prefManager.getStringValue("rotation");
 
         if (bmp.getWidth() > bmp.getHeight()) {
-            if (rotation.equalsIgnoreCase("anticlockwise")) {
+            //manual rotation done by user in home page
+            /*if (rotation.equalsIgnoreCase("anticlockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
             } else if (rotation.equalsIgnoreCase("clockwise")) {
                 Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
-            }
+            }*/
 
             bmp_w = 240;
             bmp_h = bmp_w * bmp.getWidth() / bmp.getHeight();
