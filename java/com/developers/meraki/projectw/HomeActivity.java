@@ -169,6 +169,11 @@ public class HomeActivity extends AppCompatActivity
             case R.id.nav_settings:
                 startActivity(new Intent(this, SettingsActivity.class));
                 break;
+            case R.id.nav_template:
+                // go to template link
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://docs.google.com/document/d/1IaA-5iZ8s-VKB-TaCt-0_8ujucRkpYrqfQ1fkjrVpUM/edit?usp=sharing"));
+                startActivity(browserIntent);
+                break;
             case R.id.nav_share:
                 shareApp();
                 break;
@@ -227,7 +232,7 @@ public class HomeActivity extends AppCompatActivity
             prefManager.setIntValue("isFirstTime", 1);
             prefManager.setIntValue("frame_rate", 2);
             prefManager.setStringValue("root_path", path);
-            prefManager.setStringValue("rotation", "clockwise");
+            prefManager.setStringValue("rotation", "anticlockwise");
         }
 
         btnImage = (Button) findViewById(R.id.btnProcessImage);
@@ -269,20 +274,24 @@ public class HomeActivity extends AppCompatActivity
                 break;
 
             case R.id.btnClockwise:
-                rotateView(90);
-                //image.setRotation(image.getRotation() + 90);
-                //Toast.makeText(this, "Clockwise", Toast.LENGTH_SHORT).show();
+                if (is_menu_image) {
+                    rotateImage(90);
+                } else {
+                    //videoView.setRotation(image.getRotation() + 90);
+                }
                 break;
 
             case R.id.btnAntiClockwise:
-                rotateView(-90);
-                //image.setRotation(image.getRotation() - 90);
-                //Toast.makeText(this, "Anti-Clockwise", Toast.LENGTH_SHORT).show();
+                if (is_menu_image) {
+                    rotateImage(-90);
+                } else {
+                    //videoView.setRotation(image.getRotation() - 90);
+                }
                 break;
         }
     }
 
-    private void rotateView(int angle) {
+    private void rotateImage(int angle) {
         mCurrRotation %= 360;
 
         float fromRotation = mCurrRotation;
@@ -320,10 +329,15 @@ public class HomeActivity extends AppCompatActivity
         if (is_menu_image) {
             image.setVisibility(View.VISIBLE);
             videoView.setVisibility(View.GONE);
+
+            btnAnticlock.setVisibility(View.VISIBLE);
+            btnClock.setVisibility(View.VISIBLE);
         } else {
             image.setVisibility(View.GONE);
             videoView.setVisibility(View.VISIBLE);
-            btnImage.setText("Generate Panorama");
+            btnImage.setText("Generate Tile Image");
+            btnAnticlock.setVisibility(View.GONE);
+            btnClock.setVisibility(View.GONE);
         }
         btnImage.setVisibility(View.VISIBLE);
         txtResultWellPlate.setText("");
@@ -342,7 +356,7 @@ public class HomeActivity extends AppCompatActivity
         Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
 
-        Toast.makeText(this, "W:" + bitmap.getWidth() + " H:" + bitmap.getHeight(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "W:" + bitmap.getWidth() + " H:" + bitmap.getHeight(), Toast.LENGTH_SHORT).show();
     }
 
     private void processVideo() {
@@ -385,7 +399,7 @@ public class HomeActivity extends AppCompatActivity
                 btnImage.setText("Process Image");
                 btnImage.setClickable(true);
                 btnImage.setVisibility(View.INVISIBLE);
-                //txtResultWellPlate.setText("Panorama Image generated!");
+                txtResultWellPlate.setText("Tile Image generated!\nLocation:"+tmp_panorama_dir);
 
                 image.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.GONE);

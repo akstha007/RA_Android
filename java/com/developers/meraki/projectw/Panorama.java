@@ -63,12 +63,26 @@ public class Panorama {
             {"s", "t", "u", "v", "w", "x"}
     };
 
+    private String[] well_plate_value = {
+            "a", "y", "z", "+", "e", "f",
+            "g", "h", "i", "j", "k", "&",
+            "m", "?", "$", "p", "9", "r",
+            "#", "t", "%", "v", "w", "*"
+    };
+
     private int[][] rawImages = {
+            {R.raw.a, 11}, {R.raw.y, 12}, {R.raw.z, 13}, {R.raw.d, 14}, {R.raw.e, 15}, {R.raw.f, 16},
+            {R.raw.g, 21}, {R.raw.h, 22}, {R.raw.i, 23}, {R.raw.j, 24}, {R.raw.k, 25}, {R.raw.l, 26},
+            {R.raw.m, 31}, {R.raw.n, 32}, {R.raw.o, 33}, {R.raw.p, 34}, {R.raw.q, 35}, {R.raw.r, 36},
+            {R.raw.s, 41}, {R.raw.t, 42}, {R.raw.u, 43}, {R.raw.v, 44}, {R.raw.w, 45}, {R.raw.x, 46}
+    };
+
+    /*private int[][] rawImages = {
             {R.raw.a, 1}, {R.raw.y, 25}, {R.raw.z, 26}, {R.raw.d, 4}, {R.raw.e, 5}, {R.raw.f, 6},
             {R.raw.g, 7}, {R.raw.h, 8}, {R.raw.i, 9}, {R.raw.j, 10}, {R.raw.k, 11}, {R.raw.l, 12},
             {R.raw.m, 13}, {R.raw.n, 14}, {R.raw.o, 15}, {R.raw.p, 16}, {R.raw.q, 17}, {R.raw.r, 18},
             {R.raw.s, 19}, {R.raw.t, 20}, {R.raw.u, 21}, {R.raw.v, 22}, {R.raw.w, 23}, {R.raw.x, 24}
-    };
+    };*/
 
     Panorama(Context context) {
         this.context = context;
@@ -283,11 +297,14 @@ public class Panorama {
 
         if (bmp.getWidth() > bmp.getHeight()) {
             //manual rotation done by user in home page
-            /*if (rotation.equalsIgnoreCase("anticlockwise")) {
-                Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
-            } else if (rotation.equalsIgnoreCase("clockwise")) {
-                Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
-            }*/
+            //use it for videos only
+            if (!is_menu_image) {
+                if (rotation.equalsIgnoreCase("anticlockwise")) {
+                    Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
+                } else if (rotation.equalsIgnoreCase("clockwise")) {
+                    Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
+                }
+            }
 
             bmp_w = 240;
             bmp_h = bmp_w * bmp.getWidth() / bmp.getHeight();
@@ -419,7 +436,10 @@ public class Panorama {
 
         for (int i = 0; i < rawImages.length; i++) {
 
-            String imgname = "" + (char) (rawImages[i][1] + 'a' - 1);
+            //String imgname = "" + (char) (rawImages[i][1] + 'a' - 1);
+            int r = rawImages[i][1]/10;
+            int c = rawImages[i][1]%10;
+            String imgname = "R-" + r + " C-" + c + " ( " + well_plate_value[i] + " )";
             if (!isFirst && map.containsKey(imgname)) {
                 continue;
             }
@@ -454,7 +474,11 @@ public class Panorama {
             double score = getPSNR(resizeImg1, resizeImg2);
             if (minError < score) {
                 minError = score;
-                imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
+                //imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
+                imageName = "" + rawImages[i][1] + " ( " + well_plate_value[i] + " )";
+                r = rawImages[i][1]/10;
+                c = rawImages[i][1]%10;
+                imageName = "R-" + r + " C-" + c + " ( " + well_plate_value[i] + " )";
             }
         }
 
@@ -495,12 +519,11 @@ public class Panorama {
 
         double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-        if( sse <= 1e-10) // for small values return zero
+        if (sse <= 1e-10) // for small values return zero
             return 0;
-        else
-        {
-            double  mse =sse /(double)(I1.channels() * I1.total());
-            double psnr = 10.0*log10((255*255)/mse);
+        else {
+            double mse = sse / (double) (I1.channels() * I1.total());
+            double psnr = 10.0 * log10((255 * 255) / mse);
             return psnr;
         }
     }
