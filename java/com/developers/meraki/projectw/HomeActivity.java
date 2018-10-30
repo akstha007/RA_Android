@@ -10,6 +10,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.session.MediaController;
 import android.net.Uri;
@@ -24,6 +25,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -54,7 +56,7 @@ import java.util.List;
 import java.util.Map;
 
 public class HomeActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener {
+        implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, View.OnTouchListener {
 
     private Button btnImage;
     private TextView txtResultWellPlate;
@@ -81,6 +83,24 @@ public class HomeActivity extends AppCompatActivity
     String mCurrentPhotoPath;
     private ImageButton btnClock, btnAnticlock;
     private int mCurrRotation = 0;
+
+    @SuppressWarnings("unused")
+    private static final float MIN_ZOOM = 1f,MAX_ZOOM = 1f;
+
+    // These matrices will be used to scale points of the image
+    Matrix matrix = new Matrix();
+    Matrix savedMatrix = new Matrix();
+
+    // The 3 states (events) which the user is trying to perform
+    static final int NONE = 0;
+    static final int DRAG = 1;
+    static final int ZOOM = 2;
+    int mode = NONE;
+
+    // these PointF objects are used to record the point(s) the user is touching
+    PointF start = new PointF();
+    PointF mid = new PointF();
+    float oldDist = 1f;
 
     static {
         System.loadLibrary("opencv_java3");
@@ -209,7 +229,7 @@ public class HomeActivity extends AppCompatActivity
     public void shareApp() {
         Intent i = new Intent(Intent.ACTION_SEND);
         i.setType("text/plain");
-        i.putExtra(Intent.EXTRA_SUBJECT, "Project X");
+        i.putExtra(Intent.EXTRA_SUBJECT, "mScanner");
         String text = "Must for every student!\n\n";
         text += "http://play.google.com/store/apps/details?id=" + this.getPackageName();
         i.putExtra(Intent.EXTRA_TEXT, text);
@@ -228,7 +248,7 @@ public class HomeActivity extends AppCompatActivity
         prefManager = new PrefManager(this);
         if (prefManager.getIntValue("isFirstTime") == 0) {
             //first time
-            String path = Panorama.getPublicAlbumStorageDir("ProjectX", prefManager);
+            String path = Panorama.getPublicAlbumStorageDir("mScanner", prefManager);
             prefManager.setIntValue("isFirstTime", 1);
             prefManager.setIntValue("frame_rate", 2);
             prefManager.setStringValue("root_path", path);
@@ -245,6 +265,7 @@ public class HomeActivity extends AppCompatActivity
         btnImage.setOnClickListener(this);
         btnClock.setOnClickListener(this);
         btnAnticlock.setOnClickListener(this);
+        image.setOnTouchListener(this);
 
         videoPlayer = new VideoPlayer(this, videoView);
         panorama = new Panorama(this);
@@ -675,7 +696,7 @@ public class HomeActivity extends AppCompatActivity
     private File createImageFile() throws IOException {
         // Create an image file name
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "ProjectX/DCIM");
+                Environment.DIRECTORY_PICTURES), "mScanner/DCIM");
 
         if (!mediaStorageDir.exists()) {
             if (!mediaStorageDir.mkdirs()) {
@@ -698,4 +719,130 @@ public class HomeActivity extends AppCompatActivity
         //Toast.makeText(this, "Path: "+mCurrentPhotoPath, Toast.LENGTH_SHORT).show();
         return image;
     }
+
+    @Override
+    public boolean onTouch(View view, MotionEvent event) {
+        image.setScaleType(ImageView.ScaleType.MATRIX);
+        float scale;
+
+        dumpEvent(event);
+        // Handle touch events here...
+
+        switch (event.getAction() & MotionEvent.ACTION_MASK)
+        {
+            case MotionEvent.ACTION_DOWN:   // first finger down only
+                savedMatrix.set(matrix);
+                start.set(event.getX(), event.getY());
+                Log.d(LOG_TAG, "mode=DRAG"); // write to LogCat
+                mode = DRAG;
+                break;
+
+            case MotionEvent.ACTION_UP: // first finger lifted
+
+            case MotionEvent.ACTION_POINTER_UP: // second finger lifted
+
+                mode = NONE;
+                Log.d(LOG_TAG, "mode=NONE");
+                break;
+
+            case MotionEvent.ACTION_POINTER_DOWN: // first and second finger down
+
+                oldDist = spacing(event);
+                Log.d(LOG_TAG, "oldDist=" + oldDist);
+                if (oldDist > 5f) {
+                    savedMatrix.set(matrix);
+                    midPoint(mid, event);
+                    mode = ZOOM;
+                    Log.d(LOG_TAG, "mode=ZOOM");
+                }
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+
+                if (mode == DRAG)
+                {
+                    matrix.set(savedMatrix);
+                    matrix.postTranslate(event.getX() - start.x, event.getY() - start.y); // create the transformation in the matrix  of points
+                }
+                else if (mode == ZOOM)
+                {
+                    // pinch zooming
+                    float newDist = spacing(event);
+                    Log.d(LOG_TAG, "newDist=" + newDist);
+                    if (newDist > 5f)
+                    {
+                        matrix.set(savedMatrix);
+                        scale = newDist / oldDist; // setting the scaling of the
+                        // matrix...if scale > 1 means
+                        // zoom in...if scale < 1 means
+                        // zoom out
+                        matrix.postScale(scale, scale, mid.x, mid.y);
+                    }
+                }
+                break;
+        }
+
+        image.setImageMatrix(matrix); // display the transformation on screen
+
+        return true; // indicate event was handled
+    }
+
+    /*
+     * --------------------------------------------------------------------------
+     * Method: spacing Parameters: MotionEvent Returns: float Description:
+     * checks the spacing between the two fingers on touch
+     * ----------------------------------------------------
+     */
+
+    private float spacing(MotionEvent event)
+    {
+        float x = event.getX(0) - event.getX(1);
+        float y = event.getY(0) - event.getY(1);
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    /*
+     * --------------------------------------------------------------------------
+     * Method: midPoint Parameters: PointF object, MotionEvent Returns: void
+     * Description: calculates the midpoint between the two fingers
+     * ------------------------------------------------------------
+     */
+
+    private void midPoint(PointF point, MotionEvent event)
+    {
+        float x = event.getX(0) + event.getX(1);
+        float y = event.getY(0) + event.getY(1);
+        point.set(x / 2, y / 2);
+    }
+
+    /** Show an event in the LogCat view, for debugging */
+    private void dumpEvent(MotionEvent event)
+    {
+        String names[] = { "DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE","POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?" };
+        StringBuilder sb = new StringBuilder();
+        int action = event.getAction();
+        int actionCode = action & MotionEvent.ACTION_MASK;
+        sb.append("event ACTION_").append(names[actionCode]);
+
+        if (actionCode == MotionEvent.ACTION_POINTER_DOWN || actionCode == MotionEvent.ACTION_POINTER_UP)
+        {
+            sb.append("(pid ").append(action >> MotionEvent.ACTION_POINTER_ID_SHIFT);
+            sb.append(")");
+        }
+
+        sb.append("[");
+        for (int i = 0; i < event.getPointerCount(); i++)
+        {
+            sb.append("#").append(i);
+            sb.append("(pid ").append(event.getPointerId(i));
+            sb.append(")=").append((int) event.getX(i));
+            sb.append(",").append((int) event.getY(i));
+            if (i + 1 < event.getPointerCount())
+                sb.append(";");
+        }
+
+        sb.append("]");
+        Log.d("Touch Events ---------", sb.toString());
+    }
+
 }

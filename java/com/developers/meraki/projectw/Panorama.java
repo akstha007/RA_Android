@@ -149,9 +149,15 @@ public class Panorama {
     }
 
     public void combineImagesInRow(String dirPath, String dirPathOut) {
-        for (int i = 0; i < well_plate.length; i++) {
+        int rowLen = well_plate.length;
+        int colLen =  well_plate[0].length;
+
+        for (int i = 0; i < rowLen; i++) {
             //load first image of the row
-            String imgPath = well_plate[i][0] + ".jpg";
+            int r = rawImages[i*colLen][1]/10;
+            int c = rawImages[i*colLen][1]%10;
+            String imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i*colLen] + " )"+ ".jpg";
+            //String imgPath = well_plate[i][0] + ".jpg";
             Bitmap res = null;
             File file = new File(dirPath, imgPath);
             if (file.exists()) {
@@ -161,8 +167,11 @@ public class Panorama {
                 res = createImage(210, 210, Color.WHITE);
             }
 
-            for (int j = 1; j < well_plate[0].length; j++) {
-                imgPath = well_plate[i][j] + ".jpg";
+            for (int j = 1; j < colLen; j++) {
+                r = rawImages[i*colLen+j][1]/10;
+                c = rawImages[i*colLen+j][1]%10;
+                imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i*colLen+j] + " )"+ ".jpg";
+                //imgPath = well_plate[i][j] + ".jpg";
                 Bitmap bmp = null;
                 file = new File(dirPath, imgPath);
                 if (file.exists()) {
@@ -475,7 +484,7 @@ public class Panorama {
             if (minError < score) {
                 minError = score;
                 //imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
-                imageName = "" + rawImages[i][1] + " ( " + well_plate_value[i] + " )";
+                //imageName = "" + rawImages[i][1] + " ( " + well_plate_value[i] + " )";
                 r = rawImages[i][1]/10;
                 c = rawImages[i][1]%10;
                 imageName = "R-" + r + " C-" + c + " ( " + well_plate_value[i] + " )";
