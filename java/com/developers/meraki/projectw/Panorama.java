@@ -150,13 +150,13 @@ public class Panorama {
 
     public void combineImagesInRow(String dirPath, String dirPathOut) {
         int rowLen = well_plate.length;
-        int colLen =  well_plate[0].length;
+        int colLen = well_plate[0].length;
 
         for (int i = 0; i < rowLen; i++) {
             //load first image of the row
-            int r = rawImages[i*colLen][1]/10;
-            int c = rawImages[i*colLen][1]%10;
-            String imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i*colLen] + " )"+ ".jpg";
+            int r = rawImages[i * colLen][1] / 10;
+            int c = rawImages[i * colLen][1] % 10;
+            String imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i * colLen] + " )" + ".jpg";
             //String imgPath = well_plate[i][0] + ".jpg";
             Bitmap res = null;
             File file = new File(dirPath, imgPath);
@@ -168,9 +168,9 @@ public class Panorama {
             }
 
             for (int j = 1; j < colLen; j++) {
-                r = rawImages[i*colLen+j][1]/10;
-                c = rawImages[i*colLen+j][1]%10;
-                imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i*colLen+j] + " )"+ ".jpg";
+                r = rawImages[i * colLen + j][1] / 10;
+                c = rawImages[i * colLen + j][1] % 10;
+                imgPath = "R-" + r + " C-" + c + " ( " + well_plate_value[i * colLen + j] + " )" + ".jpg";
                 //imgPath = well_plate[i][j] + ".jpg";
                 Bitmap bmp = null;
                 file = new File(dirPath, imgPath);
@@ -298,7 +298,20 @@ public class Panorama {
         Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(bmp32, src);
 
-        int bmp_w = 240;
+        //16:9 240
+        //4:3 320
+        int aspect = 240;
+
+        float ratio = (float) bmp.getWidth() / bmp.getHeight();
+
+        if (ratio < 1) {
+            ratio = 1 / ratio;
+        }
+        if (ratio < 1.6) {
+            aspect = 320;
+        }
+
+        int bmp_w = aspect;
         int bmp_h = bmp_w * bmp.getHeight() / bmp.getWidth();
 
         //check if the image needs to be rotated clockwise or anti-clockwise
@@ -315,7 +328,7 @@ public class Panorama {
                 }
             }
 
-            bmp_w = 240;
+            bmp_w = aspect;
             bmp_h = bmp_w * bmp.getWidth() / bmp.getHeight();
         }
 
@@ -446,8 +459,8 @@ public class Panorama {
         for (int i = 0; i < rawImages.length; i++) {
 
             //String imgname = "" + (char) (rawImages[i][1] + 'a' - 1);
-            int r = rawImages[i][1]/10;
-            int c = rawImages[i][1]%10;
+            int r = rawImages[i][1] / 10;
+            int c = rawImages[i][1] % 10;
             String imgname = "R-" + r + " C-" + c + " ( " + well_plate_value[i] + " )";
             if (!isFirst && map.containsKey(imgname)) {
                 continue;
@@ -485,8 +498,8 @@ public class Panorama {
                 minError = score;
                 //imageName = "" + (char) (rawImages[i][1] + 'a' - 1);
                 //imageName = "" + rawImages[i][1] + " ( " + well_plate_value[i] + " )";
-                r = rawImages[i][1]/10;
-                c = rawImages[i][1]%10;
+                r = rawImages[i][1] / 10;
+                c = rawImages[i][1] % 10;
                 imageName = "R-" + r + " C-" + c + " ( " + well_plate_value[i] + " )";
             }
         }

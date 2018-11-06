@@ -77,6 +77,7 @@ public class HomeActivity extends AppCompatActivity
     private Panorama panorama;
     private PrefManager prefManager;
     private final int REQUEST_DIR_PERMISSION = 101;
+    private static final int REQUEST_CAMERA_PERMISSION = 901;
     static final int REQUEST_IMAGE_CAPTURE = 401;
     static final int REQUEST_TAKE_PHOTO = 402;
     static final int REQUEST_VIDEO_CAPTURE = 101;
@@ -85,7 +86,7 @@ public class HomeActivity extends AppCompatActivity
     private int mCurrRotation = 0;
 
     @SuppressWarnings("unused")
-    private static final float MIN_ZOOM = 1f,MAX_ZOOM = 1f;
+    private static final float MIN_ZOOM = 1f, MAX_ZOOM = 1f;
 
     // These matrices will be used to scale points of the image
     Matrix matrix = new Matrix();
@@ -124,6 +125,7 @@ public class HomeActivity extends AppCompatActivity
 
         initIds();
         openDirectory();
+        //openCamera();
     }
 
     @Override
@@ -165,15 +167,19 @@ public class HomeActivity extends AppCompatActivity
 
         switch (item.getItemId()) {
             case R.id.nav_camera:
-                is_menu_image = true;
-                dispatchTakePictureIntent();
-                updateUI();
+                if(openCamera()) {
+                    is_menu_image = true;
+                    dispatchTakePictureIntent();
+                    updateUI();
+                }
                 break;
 
             case R.id.nav_video:
-                is_menu_image = false;
-                dispatchTakeVideoIntent();
-                updateUI();
+                if(openCamera()) {
+                    is_menu_image = false;
+                    dispatchTakeVideoIntent();
+                    updateUI();
+                }
                 break;
 
             case R.id.nav_gallery_pic:
@@ -240,8 +246,23 @@ public class HomeActivity extends AppCompatActivity
     private void openDirectory() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_DIR_PERMISSION);
         }
+    }
+
+    private boolean openCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.CAMERA},
+                    REQUEST_CAMERA_PERMISSION);
+
+            return false;
+        }
+
+        return true;
     }
 
     private void initIds() {
@@ -420,7 +441,7 @@ public class HomeActivity extends AppCompatActivity
                 btnImage.setText("Process Image");
                 btnImage.setClickable(true);
                 btnImage.setVisibility(View.INVISIBLE);
-                txtResultWellPlate.setText("Tile Image generated!\nLocation:"+tmp_panorama_dir);
+                txtResultWellPlate.setText("Tile Image generated!\nLocation:" + tmp_panorama_dir);
 
                 image.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.GONE);
@@ -580,30 +601,36 @@ public class HomeActivity extends AppCompatActivity
         }
     }
 
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                REQUEST_DIR_PERMISSION);
-    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case REQUEST_DIR_PERMISSION: {
+            case REQUEST_DIR_PERMISSION:
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                 } else {
                     //permission not granted show error dialog
-                    showDialog();
+                    showDialogDir();
                 }
-                return;
-            }
+
+                break;
+
+            case REQUEST_CAMERA_PERMISSION:
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                } else {
+                    //permission not granted show error dialog
+                    showDialogCamera();
+                }
+
+                break;
         }
     }
 
-    public void showDialog() {
+    public void showDialogDir() {
         AlertDialog.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             builder = new AlertDialog.Builder(this, android.R.style.ThemeOverlay_Material_Dialog_Alert);
@@ -614,17 +641,38 @@ public class HomeActivity extends AppCompatActivity
                 .setMessage("Permission Denied! App may not work properly if permission is not granted.")
                 .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // continue with delete
-                        requestCameraPermission();
+                        openDirectory();
                     }
                 })
                 .setNegativeButton("Deny", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // do nothing
                         dialog.dismiss();
                     }
                 })
                 .setIcon(R.drawable.ic_dir)
+                .show();
+    }
+
+    public void showDialogCamera() {
+        AlertDialog.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder = new AlertDialog.Builder(this, android.R.style.ThemeOverlay_Material_Dialog_Alert);
+        } else {
+            builder = new AlertDialog.Builder(this);
+        }
+        builder.setTitle("Permissions")
+                .setMessage("Permission Denied! App may not work properly if permission is not granted.")
+                .setPositiveButton("Allow", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        openCamera();
+                    }
+                })
+                .setNegativeButton("Deny", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(R.drawable.ic_cam)
                 .show();
     }
 
@@ -728,8 +776,7 @@ public class HomeActivity extends AppCompatActivity
         dumpEvent(event);
         // Handle touch events here...
 
-        switch (event.getAction() & MotionEvent.ACTION_MASK)
-        {
+        switch (event.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:   // first finger down only
                 savedMatrix.set(matrix);
                 start.set(event.getX(), event.getY());
@@ -759,18 +806,14 @@ public class HomeActivity extends AppCompatActivity
 
             case MotionEvent.ACTION_MOVE:
 
-                if (mode == DRAG)
-                {
+                if (mode == DRAG) {
                     matrix.set(savedMatrix);
                     matrix.postTranslate(event.getX() - start.x, event.getY() - start.y); // create the transformation in the matrix  of points
-                }
-                else if (mode == ZOOM)
-                {
+                } else if (mode == ZOOM) {
                     // pinch zooming
                     float newDist = spacing(event);
                     Log.d(LOG_TAG, "newDist=" + newDist);
-                    if (newDist > 5f)
-                    {
+                    if (newDist > 5f) {
                         matrix.set(savedMatrix);
                         scale = newDist / oldDist; // setting the scaling of the
                         // matrix...if scale > 1 means
@@ -794,8 +837,7 @@ public class HomeActivity extends AppCompatActivity
      * ----------------------------------------------------
      */
 
-    private float spacing(MotionEvent event)
-    {
+    private float spacing(MotionEvent event) {
         float x = event.getX(0) - event.getX(1);
         float y = event.getY(0) - event.getY(1);
         return (float) Math.sqrt(x * x + y * y);
@@ -808,31 +850,29 @@ public class HomeActivity extends AppCompatActivity
      * ------------------------------------------------------------
      */
 
-    private void midPoint(PointF point, MotionEvent event)
-    {
+    private void midPoint(PointF point, MotionEvent event) {
         float x = event.getX(0) + event.getX(1);
         float y = event.getY(0) + event.getY(1);
         point.set(x / 2, y / 2);
     }
 
-    /** Show an event in the LogCat view, for debugging */
-    private void dumpEvent(MotionEvent event)
-    {
-        String names[] = { "DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE","POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?" };
+    /**
+     * Show an event in the LogCat view, for debugging
+     */
+    private void dumpEvent(MotionEvent event) {
+        String names[] = {"DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE", "POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?"};
         StringBuilder sb = new StringBuilder();
         int action = event.getAction();
         int actionCode = action & MotionEvent.ACTION_MASK;
         sb.append("event ACTION_").append(names[actionCode]);
 
-        if (actionCode == MotionEvent.ACTION_POINTER_DOWN || actionCode == MotionEvent.ACTION_POINTER_UP)
-        {
+        if (actionCode == MotionEvent.ACTION_POINTER_DOWN || actionCode == MotionEvent.ACTION_POINTER_UP) {
             sb.append("(pid ").append(action >> MotionEvent.ACTION_POINTER_ID_SHIFT);
             sb.append(")");
         }
 
         sb.append("[");
-        for (int i = 0; i < event.getPointerCount(); i++)
-        {
+        for (int i = 0; i < event.getPointerCount(); i++) {
             sb.append("#").append(i);
             sb.append("(pid ").append(event.getPointerId(i));
             sb.append(")=").append((int) event.getX(i));
