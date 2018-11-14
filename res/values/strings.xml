@@ -11,6 +11,7 @@
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
 
     <string-array name="array_rotation">
+        <item>None</item>
         <item>Clockwise</item>
         <item>Anti-clockwise</item>
     </string-array>

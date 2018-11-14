@@ -33,43 +33,77 @@
             android:orientation="vertical"
             android:padding="7dp">
 
-            <ImageView
-                android:id="@+id/imgWellPlate"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible" />
-
             <VideoView
                 android:id="@+id/videoView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone" />
+
+            <RelativeLayout
+                android:id="@+id/layoutImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+
+                <ImageView
+                    android:id="@+id/imgWellPlate"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:visibility="visible" />
+
+                <ImageButton
+                    android:id="@+id/btnFullScreen"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignParentBottom="true"
+                    android:background="@null"
+                    android:padding="4dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_full_s" />
+
+                <ImageButton
+                    android:id="@+id/btnShare"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentRight="true"
+                    android:background="@null"
+                    android:padding="4dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_share" />
+
+            </RelativeLayout>
+
+
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="7dp"
             android:background="@drawable/bg_games"
-            android:gravity="center">
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="7dp">
 
             <ImageButton
                 android:id="@+id/btnClockwise"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:background="@drawable/bg_btn"
-                android:src="@drawable/ic_clockwise"
+                android:padding="10dp"
                 android:scaleType="fitCenter"
-                android:padding="10dp"/>
+                android:src="@drawable/ic_clockwise" />
 
             <Button
                 android:id="@+id/btnProcessImage"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="match_parent"
                 android:layout_marginLeft="7dp"
                 android:layout_marginRight="7dp"
+                android:layout_weight="1"
                 android:background="@drawable/bg_btn"
                 android:padding="10dp"
                 android:text="Process Image"
@@ -81,9 +115,9 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:background="@drawable/bg_btn"
-                android:src="@drawable/ic_anticlock"
+                android:padding="10dp"
                 android:scaleType="fitCenter"
-                android:padding="10dp"/>
+                android:src="@drawable/ic_anticlock" />
         </LinearLayout>
 
         <ScrollView

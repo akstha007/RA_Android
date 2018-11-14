@@ -39,6 +39,7 @@ import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
@@ -71,7 +72,7 @@ public class HomeActivity extends AppCompatActivity
     private boolean is_menu_image = true;
     private String LOG_TAG = "MainActivity";
     private List<String> files;
-    private String tmp_well_dir, tmp_out_dir, tmp_panorama_dir;
+    private String tmp_well_dir, tmp_out_dir, tmp_panorama_dir, tmp_result_dir;
     private VideoPlayer videoPlayer;
     private Map<String, String> map = new HashMap<String, String>();
     private Panorama panorama;
@@ -84,6 +85,10 @@ public class HomeActivity extends AppCompatActivity
     String mCurrentPhotoPath;
     private ImageButton btnClock, btnAnticlock;
     private int mCurrRotation = 0;
+
+    private ImageButton btnShare, btnFullScreen;
+    private RelativeLayout layoutImage;
+    private String shareImagePath = "";
 
     @SuppressWarnings("unused")
     private static final float MIN_ZOOM = 1f, MAX_ZOOM = 1f;
@@ -161,13 +166,31 @@ public class HomeActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
+
+    void resetImageView() {
+        //image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        //image.setScaleType(ImageView.ScaleType.MATRIX);
+        //matrix = new Matrix();
+        //matrix.postTranslate(0,0);
+        //matrix.postScale(1,1);
+        //savedMatrix.set(matrix);
+        //savedMatrix.reset();
+        //matrix.reset();
+        //image.setImageMatrix(matrix);
+
+        //image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        //image.setScaleType(ImageView.ScaleType.MATRIX);
+        //Toast.makeText(this, "this is toasted meme", Toast.LENGTH_SHORT).show();
+    }
+
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
 
         switch (item.getItemId()) {
             case R.id.nav_camera:
-                if(openCamera()) {
+                if (openCamera()) {
+                    resetImageView();
                     is_menu_image = true;
                     dispatchTakePictureIntent();
                     updateUI();
@@ -175,7 +198,8 @@ public class HomeActivity extends AppCompatActivity
                 break;
 
             case R.id.nav_video:
-                if(openCamera()) {
+                if (openCamera()) {
+                    resetImageView();
                     is_menu_image = false;
                     dispatchTakeVideoIntent();
                     updateUI();
@@ -183,11 +207,14 @@ public class HomeActivity extends AppCompatActivity
                 break;
 
             case R.id.nav_gallery_pic:
+                resetImageView();
                 is_menu_image = true;
                 loadImagefromGallery();
                 updateUI();
+
                 break;
             case R.id.nav_gallery_vid:
+                resetImageView();
                 is_menu_image = false;
                 loadVideofromGallery();
                 updateUI();
@@ -270,6 +297,8 @@ public class HomeActivity extends AppCompatActivity
         if (prefManager.getIntValue("isFirstTime") == 0) {
             //first time
             String path = Panorama.getPublicAlbumStorageDir("mScanner", prefManager);
+            //tmp_result_dir = panorama.getPublicAlbumStorageDir("mScanner/results", prefManager);
+
             prefManager.setIntValue("isFirstTime", 1);
             prefManager.setIntValue("frame_rate", 2);
             prefManager.setStringValue("root_path", path);
@@ -282,11 +311,16 @@ public class HomeActivity extends AppCompatActivity
         videoView = (VideoView) findViewById(R.id.videoView);
         btnClock = (ImageButton) findViewById(R.id.btnClockwise);
         btnAnticlock = (ImageButton) findViewById(R.id.btnAntiClockwise);
+        btnShare = (ImageButton) findViewById(R.id.btnShare);
+        btnFullScreen = (ImageButton) findViewById(R.id.btnFullScreen);
+        layoutImage = (RelativeLayout) findViewById(R.id.layoutImage);
 
         btnImage.setOnClickListener(this);
         btnClock.setOnClickListener(this);
         btnAnticlock.setOnClickListener(this);
-        image.setOnTouchListener(this);
+        //image.setOnTouchListener(this);
+        btnShare.setOnClickListener(this);
+        btnFullScreen.setOnClickListener(this);
 
         videoPlayer = new VideoPlayer(this, videoView);
         panorama = new Panorama(this);
@@ -330,7 +364,36 @@ public class HomeActivity extends AppCompatActivity
                     //videoView.setRotation(image.getRotation() - 90);
                 }
                 break;
+
+            case R.id.btnShare:
+                shareImage();
+                break;
+
+            case R.id.btnFullScreen:
+                displayFullImage();
+                break;
         }
+    }
+
+    private void shareImage() {
+        //check if image exist
+        File file = new File(shareImagePath);
+
+        if (file.exists()) {
+            //Toast.makeText(this, "Sharing Path: " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+            //share image to drive
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType("image/*");
+            i.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file.getAbsoluteFile()));
+            startActivity(Intent.createChooser(i, "Share Image"));
+        } else {
+            Toast.makeText(this, "Error! No image found.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void displayFullImage() {
+        //display full image
+
     }
 
     private void rotateImage(int angle) {
@@ -369,13 +432,15 @@ public class HomeActivity extends AppCompatActivity
 
     private void updateUI() {
         if (is_menu_image) {
-            image.setVisibility(View.VISIBLE);
+            //image.setVisibility(View.VISIBLE);
+            layoutImage.setVisibility(View.VISIBLE);
             videoView.setVisibility(View.GONE);
 
             btnAnticlock.setVisibility(View.VISIBLE);
             btnClock.setVisibility(View.VISIBLE);
         } else {
-            image.setVisibility(View.GONE);
+            //image.setVisibility(View.GONE);
+            layoutImage.setVisibility(View.GONE);
             videoView.setVisibility(View.VISIBLE);
             btnImage.setText("Generate Tile Image");
             btnAnticlock.setVisibility(View.GONE);
@@ -383,6 +448,20 @@ public class HomeActivity extends AppCompatActivity
         }
         btnImage.setVisibility(View.VISIBLE);
         txtResultWellPlate.setText("");
+    }
+
+    //generate current time for image name
+    private String getCurrentTime() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HH_mm_ss");
+        String currentTimeStamp = dateFormat.format(new Date());
+        return currentTimeStamp;
+    }
+
+    private String getRootPath(String albumName) {
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), albumName);
+
+        return file.getAbsolutePath();
     }
 
     private void processImage() {
@@ -397,6 +476,14 @@ public class HomeActivity extends AppCompatActivity
 
         Bitmap bittmap = panorama.getContourArea(bitmap, is_menu_image, imgDecodableString, tmp_well_dir, txtResultWellPlate, true);
         image.setImageBitmap(bittmap);
+
+
+        //save image
+        String imageName = "result_" + getCurrentTime();
+        shareImagePath = getRootPath("mScanner/results");
+        panorama.saveImage(shareImagePath, imageName, bittmap);
+
+        shareImagePath += "/" + imageName + ".jpg";
 
         //Toast.makeText(this, "W:" + bitmap.getWidth() + " H:" + bitmap.getHeight(), Toast.LENGTH_SHORT).show();
     }
@@ -445,6 +532,12 @@ public class HomeActivity extends AppCompatActivity
 
                 image.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.GONE);
+
+                //save image
+                String imageName = "tilemap_" + getCurrentTime();
+                shareImagePath = getRootPath("mScanner/results");
+                panorama.saveImage(getRootPath("mScanner/results"), imageName, bmp);
+                shareImagePath += "/" + imageName + ".jpg";
             }
         }, 1000);
     }
@@ -493,6 +586,10 @@ public class HomeActivity extends AppCompatActivity
                 Bitmap myBitmap = BitmapFactory.decodeFile(imgDecodableString);
                 image.setImageBitmap(myBitmap);
 
+
+                //for sharing
+                shareImagePath = imgDecodableString;
+
                 //getContourArea(myBitmap);
 
             } else if (requestCode == RESULT_IMAGE_PATH && resultCode == RESULT_OK && data != null) {
@@ -502,6 +599,9 @@ public class HomeActivity extends AppCompatActivity
 
                 image.setImageBitmap(myBitmap);
                 imgDecodableString = imgFile.getAbsolutePath();
+
+                //for sharing
+                shareImagePath = imagePath;
 
                 //getContourArea(myBitmap);
 

@@ -122,7 +122,8 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
             //anticlockwise
             rotation = "anticlockwise";
             //Toast.makeText(this, "Anti clockwise", Toast.LENGTH_SHORT).show();
-
+        }else{
+            rotation = "None";
         }
 
     }
