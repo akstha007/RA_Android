@@ -324,10 +324,12 @@ public class Panorama {
             //manual rotation done by user in home page
             //use it for videos only
             if (!is_menu_image) {
-                if (rotation.equalsIgnoreCase("anticlockwise")) {
+                if (rotation.equalsIgnoreCase("-90")) {
                     Core.rotate(src, src, Core.ROTATE_90_COUNTERCLOCKWISE);
-                } else if (rotation.equalsIgnoreCase("clockwise")) {
+                } else if (rotation.equalsIgnoreCase("90")) {
                     Core.rotate(src, src, Core.ROTATE_90_CLOCKWISE);
+                }else if (rotation.equalsIgnoreCase("180")) {
+                    Core.rotate(src, src, Core.ROTATE_180);
                 }
             }
 

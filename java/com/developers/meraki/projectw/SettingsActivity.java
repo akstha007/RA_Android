@@ -57,10 +57,14 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
         spinnerRotation.setAdapter(adapter);
 
         String rotation = prefManager.getStringValue("rotation");
-        if (rotation.equalsIgnoreCase("clockwise")) {
+        if (rotation.equalsIgnoreCase("0")) {
             spinnerRotation.setSelection(0);
-        } else if (rotation.equalsIgnoreCase("anticlockwise")) {
+        } else if (rotation.equalsIgnoreCase("90")) {
             spinnerRotation.setSelection(1);
+        }else if (rotation.equalsIgnoreCase("180")) {
+            spinnerRotation.setSelection(2);
+        }else if (rotation.equalsIgnoreCase("-90")) {
+            spinnerRotation.setSelection(3);
         }
     }
 
@@ -114,16 +118,18 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
     @Override
     public void onItemSelected(AdapterView<?> parent, View view,
                                int pos, long id) {
-        if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("Clockwise")) {
-            //clockwise
-            rotation = "clockwise";
-            //Toast.makeText(this, "CLockwise", Toast.LENGTH_SHORT).show();
-        } else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("Anti-clockwise")) {
-            //anticlockwise
-            rotation = "anticlockwise";
-            //Toast.makeText(this, "Anti clockwise", Toast.LENGTH_SHORT).show();
-        }else{
-            rotation = "None";
+        if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("0")) {
+            //No rotation
+            rotation = "0";
+        } else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("90")) {
+            //clockwise 90
+            rotation = "90";
+        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("180")) {
+            //clockwise 180
+            rotation = "180";
+        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("-90")) {
+            //anticlockwise 90
+            rotation = "-90";
         }
 
     }

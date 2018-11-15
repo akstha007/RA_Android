@@ -302,7 +302,7 @@ public class HomeActivity extends AppCompatActivity
             prefManager.setIntValue("isFirstTime", 1);
             prefManager.setIntValue("frame_rate", 2);
             prefManager.setStringValue("root_path", path);
-            prefManager.setStringValue("rotation", "anticlockwise");
+            prefManager.setStringValue("rotation", "-90");
         }
 
         btnImage = (Button) findViewById(R.id.btnProcessImage);
@@ -526,12 +526,14 @@ public class HomeActivity extends AppCompatActivity
 
                 image.setImageBitmap(bmp);
                 btnImage.setText("Process Image");
-                btnImage.setClickable(true);
-                btnImage.setVisibility(View.INVISIBLE);
                 txtResultWellPlate.setText("Tile Image generated!\nLocation:" + tmp_panorama_dir);
+                btnImage.setClickable(true);
 
-                image.setVisibility(View.VISIBLE);
+                //image.setVisibility(View.VISIBLE);
+                layoutImage.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.GONE);
+
+                btnImage.setVisibility(View.INVISIBLE);
 
                 //save image
                 String imageName = "tilemap_" + getCurrentTime();
