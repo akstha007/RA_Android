@@ -3,6 +3,7 @@ package com.developers.meraki.projectw;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 public class AboutActivity extends AppCompatActivity {
 
@@ -13,6 +14,14 @@ public class AboutActivity extends AppCompatActivity {
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
+
+        setAppVersion();
+    }
+
+    private void setAppVersion() {
+        String versionName = BuildConfig.VERSION_NAME;
+        TextView txtAppVersion = (TextView)findViewById(R.id.txtAppVersion);
+        txtAppVersion.setText("Version "+versionName);
     }
 
     @Override

@@ -20,9 +20,10 @@
         android:textStyle="bold"/>
 
     <TextView
+        android:id="@+id/txtAppVersion"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Version 1.0"
+        android:text="Version "
         android:textColor="@color/aboutText"
         android:textSize="18sp"
         android:gravity="center"
