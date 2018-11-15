@@ -11,10 +11,10 @@
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
 
     <string-array name="array_rotation">
-        <item>0</item>
-        <item>90</item>
-        <item>180</item>
-        <item>-90</item>
+        <item>None</item>
+        <item>Clockwise 90</item>
+        <item>Clockwise 180</item>
+        <item>Anticlockwise 90</item>
     </string-array>
     <string name="title_activity_home">HomeActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>

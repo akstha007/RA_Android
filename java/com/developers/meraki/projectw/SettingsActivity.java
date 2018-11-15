@@ -118,16 +118,16 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
     @Override
     public void onItemSelected(AdapterView<?> parent, View view,
                                int pos, long id) {
-        if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("0")) {
+        if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("None")) {
             //No rotation
             rotation = "0";
-        } else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("90")) {
+        } else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("Clockwise 90")) {
             //clockwise 90
             rotation = "90";
-        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("180")) {
+        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("Clockwise 180")) {
             //clockwise 180
             rotation = "180";
-        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("-90")) {
+        }else if (parent.getItemAtPosition(pos).toString().equalsIgnoreCase("Anticlockwise 90")) {
             //anticlockwise 90
             rotation = "-90";
         }
