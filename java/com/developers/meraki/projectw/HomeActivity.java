@@ -168,19 +168,14 @@ public class HomeActivity extends AppCompatActivity
 
 
     void resetImageView() {
-        //image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        //image.setScaleType(ImageView.ScaleType.MATRIX);
-        //matrix = new Matrix();
-        //matrix.postTranslate(0,0);
-        //matrix.postScale(1,1);
-        //savedMatrix.set(matrix);
-        //savedMatrix.reset();
-        //matrix.reset();
-        //image.setImageMatrix(matrix);
+        matrix = new Matrix();
+        savedMatrix = new Matrix();
+        start = new PointF();
+        mid = new PointF();
+        oldDist = 1f;
 
-        //image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        //image.setScaleType(ImageView.ScaleType.MATRIX);
-        //Toast.makeText(this, "this is toasted meme", Toast.LENGTH_SHORT).show();
+        //image.setImageMatrix(matrix);
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
@@ -190,7 +185,7 @@ public class HomeActivity extends AppCompatActivity
         switch (item.getItemId()) {
             case R.id.nav_camera:
                 if (openCamera()) {
-                    resetImageView();
+                    //resetImageView();
                     is_menu_image = true;
                     dispatchTakePictureIntent();
                     updateUI();
@@ -199,7 +194,7 @@ public class HomeActivity extends AppCompatActivity
 
             case R.id.nav_video:
                 if (openCamera()) {
-                    resetImageView();
+                    //resetImageView();
                     is_menu_image = false;
                     dispatchTakeVideoIntent();
                     updateUI();
@@ -207,14 +202,14 @@ public class HomeActivity extends AppCompatActivity
                 break;
 
             case R.id.nav_gallery_pic:
-                resetImageView();
+                //resetImageView();
                 is_menu_image = true;
                 loadImagefromGallery();
                 updateUI();
 
                 break;
             case R.id.nav_gallery_vid:
-                resetImageView();
+                //resetImageView();
                 is_menu_image = false;
                 loadVideofromGallery();
                 updateUI();
@@ -318,7 +313,7 @@ public class HomeActivity extends AppCompatActivity
         btnImage.setOnClickListener(this);
         btnClock.setOnClickListener(this);
         btnAnticlock.setOnClickListener(this);
-        //image.setOnTouchListener(this);
+        image.setOnTouchListener(this);
         btnShare.setOnClickListener(this);
         btnFullScreen.setOnClickListener(this);
 
@@ -393,7 +388,7 @@ public class HomeActivity extends AppCompatActivity
 
     private void displayFullImage() {
         //display full image
-
+        resetImageView();
     }
 
     private void rotateImage(int angle) {
@@ -431,6 +426,8 @@ public class HomeActivity extends AppCompatActivity
     }
 
     private void updateUI() {
+        resetImageView();
+
         if (is_menu_image) {
             //image.setVisibility(View.VISIBLE);
             layoutImage.setVisibility(View.VISIBLE);
@@ -485,7 +482,7 @@ public class HomeActivity extends AppCompatActivity
 
         shareImagePath += "/" + imageName + ".jpg";
 
-        //Toast.makeText(this, "W:" + bitmap.getWidth() + " H:" + bitmap.getHeight(), Toast.LENGTH_SHORT).show();
+        resetImageView();
     }
 
     private void processVideo() {
@@ -540,6 +537,8 @@ public class HomeActivity extends AppCompatActivity
                 shareImagePath = getRootPath("mScanner/results");
                 panorama.saveImage(getRootPath("mScanner/results"), imageName, bmp);
                 shareImagePath += "/" + imageName + ".jpg";
+
+                resetImageView();
             }
         }, 1000);
     }
